@@ -13,7 +13,7 @@ bot = telebot.TeleBot(API_TOKEN)
 user_logos = {}
 user_attachments = {}
 user_titles = {}
-user_customer_names = {} # រក្សាទុកឈ្មោះអតិថិជន/ឈ្មោះផ្សេងៗសម្រាប់ User ម្នាក់ៗ
+user_pdf_names = {} # រក្សាទុកឈ្មោះ File PDF របស់អ្នកប្រើនីមួយៗ
 
 app = Flask(__name__)
 
@@ -25,13 +25,13 @@ def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# ប៊ូតុងមេ (Main Menu) រួមទាំងប៊ូតុងដាក់ឈ្មោះ
+# ប៊ូតុងមេ (Main Menu)
 def get_main_menu_keyboard():
     markup = InlineKeyboardMarkup()
     markup.row_width = 2
     markup.add(
         InlineKeyboardButton("📄 បង្កើតវិក្កយបត្រ", callback_data='btn_invoice'),
-        InlineKeyboardButton("👤 ដាក់ឈ្មោះអតិថិជន", callback_data='btn_setname'),
+        InlineKeyboardButton("📁 កំណត់ឈ្មោះ File PDF", callback_data='btn_setfilename'),
         InlineKeyboardButton("✏️ ដូរចំណងជើងវិក្កយបត្រ", callback_data='btn_settitle'),
         InlineKeyboardButton("🖼 កំណត់ Logo", callback_data='btn_setlogo'),
         InlineKeyboardButton("🗑 លុប Logo", callback_data='btn_clearlogo'),
@@ -75,10 +75,10 @@ def callback_query(call):
         )
         bot.register_next_step_handler(msg, generate_invoice)
         
-    elif call.data == 'btn_setname':
+    elif call.data == 'btn_setfilename':
         bot.answer_callback_query(call.id)
-        msg = bot.reply_to(call.message, "👤 សូមវាយបញ្ចូលឈ្មោះអតិថិជន ឬឈ្មោះដែលអ្នកចង់ដាក់បង្ហាញលើវិក្កយបត្រ៖")
-        bot.register_next_step_handler(msg, save_customer_name)
+        msg = bot.reply_to(call.message, "📁 សូមវាយបញ្ចូលឈ្មោះ File PDF ដែលអ្នកចង់បាន (ឧទាហរណ៍៖ Invoice_001 ឬ វិក្កយបត្រ_ហាងយើងខ្ញុំ)៖")
+        bot.register_next_step_handler(msg, save_pdf_filename)
         
     elif call.data == 'btn_settitle':
         bot.answer_callback_query(call.id)
@@ -111,17 +111,19 @@ def callback_query(call):
             user_attachments[chat_id] = []
         bot.send_message(chat_id, "🗑 បានលុបរូប Attachment ទាំងអស់រួចរាល់!", reply_markup=get_main_menu_keyboard())
 
-# មុខងាររក្សាទុកឈ្មោះអតិថិជន
-@bot.message_handler(commands=['setname'])
-def ask_customer_name(message):
-    msg = bot.reply_to(message, "👤 សូមវាយបញ្ចូលឈ្មោះអតិថិជន ឬឈ្មោះដែលអ្នកចង់ដាក់បង្ហាញលើវិក្កយបត្រ៖")
-    bot.register_next_step_handler(msg, save_customer_name)
+# មុខងាររក្សាទុកឈ្មោះ File PDF
+@bot.message_handler(commands=['setfilename'])
+def ask_pdf_filename(message):
+    msg = bot.reply_to(message, "📁 សូមវាយបញ្ចូលឈ្មោះ File PDF ដែលអ្នកចង់បាន៖")
+    bot.register_next_step_handler(msg, save_pdf_filename)
 
-def save_customer_name(message):
+def save_pdf_filename(message):
     chat_id = message.chat.id
     if message.text:
-        user_customer_names[chat_id] = message.text.strip()
-        bot.reply_to(message, f"✅ បានកំណត់ឈ្មោះ៖ **{user_customer_names[chat_id]}** ជោគជ័យ!", reply_markup=get_main_menu_keyboard())
+        # លុបសញ្ញាខុសប្លែកដែលអាចប៉ះពាល់ដល់ឈ្មោះឯកសារ
+        clean_name = re.sub(r'[\\/*?:"<>|]', "", message.text.strip())
+        user_pdf_names[chat_id] = clean_name
+        bot.reply_to(message, f"✅ បានកំណត់ឈ្មោះ File PDF ជា៖ **{clean_name}.pdf** ជោគជ័យ!", reply_markup=get_main_menu_keyboard())
     else:
         bot.reply_to(message, "❌ សូមបញ្ចូលអត្ថបទជាអក្សរ។")
 
@@ -271,11 +273,11 @@ def generate_invoice(message):
         logo_html = f'<img src="file://{logo_path}" class="logo" alt="Logo">'
     
     current_title = user_titles.get(chat_id, "បញ្ជីទិញឥវ៉ាន់")
-    customer_name = user_customer_names.get(chat_id, "")
-    
-    # បង្ហាញកាលបរិច្ឆេទ និងឈ្មោះអតិថិជននៅផ្នែកខាងលើ
-    date_html = f'<p class="invoice-info"><b>កាលបរិច្ឆេទ / Date:</b> {invoice_date}</p>' if invoice_date else ''
-    customer_html = f'<p class="invoice-info"><b>អតិថិជន / Customer:</b> {customer_name}</p>' if customer_name else ''
+    date_html = f'<p class="invoice-date"><b>កាលបរិច្ឆេទ / Date:</b> {invoice_date}</p>' if invoice_date else ''
+
+    # កំណត់ឈ្មោះឯកសារ PDF (បើ User មិនបានតັ້ງ ប្រើ "Invoice_A4" ជាលំនាំដើម)
+    custom_pdf_name = user_pdf_names.get(chat_id, "Invoice_A4")
+    file_name_final = f"{custom_pdf_name}.pdf"
 
     attachments_html = ""
     if chat_id in user_attachments and user_attachments[chat_id]:
@@ -311,9 +313,7 @@ def generate_invoice(message):
             .header-container {{ text-align: center; margin-bottom: 5px; position: relative; height: 80px; }}
             .logo {{ max-height: 80px; max-width: 200px; object-fit: contain; position: absolute; left: 0; top: 0; }}
             h2 {{ color: #000; margin-top: 15px; font-weight: 700; font-size: 20px; text-decoration: underline; }}
-            
-            .info-container {{ width: 100%; margin-bottom: 10px; }}
-            .invoice-info {{ font-size: 13px; margin: 3px 0; font-weight: bold; }}
+            .invoice-date {{ text-align: right; font-size: 13px; margin-bottom: 10px; font-weight: bold; }}
             
             table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
             th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }}
@@ -340,10 +340,7 @@ def generate_invoice(message):
             <h2>{current_title}</h2>
         </div>
         
-        <div class="info-container">
-            {customer_html}
-            {date_html}
-        </div>
+        {date_html}
         
         <table>
             <thead>
@@ -387,8 +384,8 @@ def generate_invoice(message):
         pdf_file = HTML(string=html_content).write_pdf()
         bot.send_document(
             message.chat.id, 
-            document=('Invoice_A4.pdf', pdf_file),
-            caption="វិក្កយបត្រ A4 របស់អ្នក (មានបង្ហាញឈ្មោះអតិថិជន និងថ្ងៃខែ) បានបង្កើតរួចរាល់ហើយ! 🎉",
+            document=(file_name_final, pdf_file),
+            caption=f"វិក្កយបត្រ `{file_name_final}` របស់អ្នកបានបង្កើតរួចរាល់ហើយ! 🎉",
             reply_markup=get_main_menu_keyboard()
         )
     except Exception as e:
