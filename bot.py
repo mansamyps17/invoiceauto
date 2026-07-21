@@ -5,6 +5,7 @@ from flask import Flask
 import threading
 import os
 import re
+from datetime import datetime
 
 API_TOKEN = os.environ.get('BOT_TOKEN', '8878587093:AAFncmD_3pLSir1paGSUgkzPhNhL4oO40Hg') 
 bot = telebot.TeleBot(API_TOKEN)
@@ -23,7 +24,7 @@ def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# មុខងារបង្កើតប៊ូតុងបញ្ជា (Inline Keyboard)
+# ប៊ូតុងមេ (Main Menu)
 def get_main_menu_keyboard():
     markup = InlineKeyboardMarkup()
     markup.row_width = 2
@@ -42,19 +43,42 @@ def send_welcome(message):
     text = "សួស្តី! សូមជ្រើសរើសជម្រើសខាងក្រោមដើម្បីចាប់ផ្តើម៖"
     bot.reply_to(message, text, reply_markup=get_main_menu_keyboard())
 
-# គ្រប់គ្រងការចុចលើប៊ូតុង (Callback Query)
+# គ្រប់គ្រងການចុចលើប៊ូតុង
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
     chat_id = call.message.chat.id
     
     if call.data == 'btn_invoice':
         bot.answer_callback_query(call.id)
-        msg = bot.reply_to(call.message, """សូមបញ្ចូលទិន្នន័យតាមទម្រង់៖
-(ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ)
-
-ឧទាហរណ៍៖
-កៅអី - 2 - ដុំ - 15$
-តុ - 1 - bộ - 20000៛""")
+        
+        # បង្កើតប៊ូតុងសម្រាប់ជ្រើសរើសកាលបរិច្ឆេទ (ថ្ងៃនេះ ឬ មិនដាក់)
+        date_markup = InlineKeyboardMarkup()
+        today_str = datetime.now().strftime("%d-%m-%Y")
+        date_markup.add(
+            InlineKeyboardButton(f"📅 យកថ្ងៃនេះ ({today_str})", callback_data=f"date_today_{today_str}"),
+            InlineKeyboardButton("❌ រំលង (មិនដាក់ថ្ងៃទី)", callback_data="date_none")
+        )
+        
+        bot.send_message(
+            chat_id, 
+            "តើអ្នកចង់ប្រើប្រាស់កាលបរិច្ឆេទថ្ងៃណាសម្រាប់វិក្កយបត្រនេះ?", 
+            reply_markup=date_markup
+        )
+        
+    elif call.data.startswith('date_today_') or call.data == 'date_none':
+        bot.answer_callback_query(call.id)
+        selected_date = call.data.split('_')[-1] if call.data.startswith('date_today_') else ""
+        
+        # រក្សាទុកកាលបរិច្ឆេទชั่วคราวក្នុង Dictionary តាម chat_id
+        if not hasattr(bot, 'temp_dates'):
+            bot.temp_dates = {}
+        bot.temp_dates[chat_id] = selected_date
+        
+        date_text = f" (កាលបរិច្ឆេទ៖ {selected_date})" if selected_date else " (អត់មានដាក់ថ្ងៃទី)"
+        msg = bot.send_message(
+            chat_id,
+            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់។\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមកតាមទម្រង់នេះ៖\n(ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ)\n\nឧទាហរណ៍៖\nកៅអី - 2 - ដុំ - 15$\nតុ - 1 - bộ - 20000៛"
+        )
         bot.register_next_step_handler(msg, generate_invoice)
         
     elif call.data == 'btn_settitle':
@@ -79,7 +103,7 @@ def callback_query(call):
         
     elif call.data == 'btn_addattachment':
         bot.answer_callback_query(call.id)
-        msg = bot.reply_to(call.message, "📎 សូមផ្ញើរូប Attachment ចូលមក (ផ្ញើច្រើនបាន)។ វាយ /done ពេលរួចរាល់៖")
+        msg = bot.reply_to(call.message, "📎 សូមផ្ញើរូប Attachment ចូលមក (ផ្ញើច្រើនបាន)។ វាយពាក្យ /done ពេលរួចរាល់៖")
         bot.register_next_step_handler(msg, collect_attachments)
         
     elif call.data == 'btn_clearattachment':
@@ -88,7 +112,7 @@ def callback_query(call):
             user_attachments[chat_id] = []
         bot.send_message(chat_id, "🗑 បានលុបរូប Attachment ទាំងអស់រួចរាល់!", reply_markup=get_main_menu_keyboard())
 
-# មុខងារបញ្ជាតាម Command ធម្មតា (រក្សាទុករួមគ្នា)
+# មុខងារបញ្ជាតាម Command ធម្មតា
 @bot.message_handler(commands=['settitle'])
 def ask_title(message):
     msg = bot.reply_to(message, "✏️ សូមវាយបញ្ចូលចំណងជើងថ្មីសម្រាប់វិក្កយបត្ររបស់អ្នក៖")
@@ -127,7 +151,7 @@ def save_logo(message):
 
 @bot.message_handler(commands=['addattachment'])
 def ask_attachment(message):
-    msg = bot.reply_to(message, "📎 សូមផ្ញើរូប Attachment ចូលមក (ផ្ញើច្រើនបាន)។ វាយ /done ពេលរួចរាល់៖")
+    msg = bot.reply_to(message, "📎 សូមផ្ញើរូប Attachment ចូលមក (ផ្ញើច្រើនបាន)។ វាយពាក្យ /done ពេលរួចរាល់៖")
     bot.register_next_step_handler(msg, collect_attachments)
 
 def collect_attachments(message):
@@ -158,15 +182,15 @@ def collect_attachments(message):
         bot.register_next_step_handler(msg, collect_attachments)
 
 @bot.message_handler(commands=['invoice'])
-def ask_for_items(message):
-    text = """សូមបញ្ចូលទិន្នន័យតាមទម្រង់នេះ៖
-(ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ)
-
-ឧទាហរណ៍៖
-កៅអី - 2 - ដុំ - 15$
-តុ - 1 - bộ - 20000៛"""
-    msg = bot.reply_to(message, text)
-    bot.register_next_step_handler(msg, generate_invoice)
+def ask_for_items_command(message):
+    chat_id = message.chat.id
+    date_markup = InlineKeyboardMarkup()
+    today_str = datetime.now().strftime("%d-%m-%Y")
+    date_markup.add(
+        InlineKeyboardButton(f"📅 យកថ្ងៃនេះ ({today_str})", callback_data=f"date_today_{today_str}"),
+        InlineKeyboardButton("❌ រំលង (មិនដាក់ថ្ងៃទី)", callback_data="date_none")
+    )
+    bot.send_message(chat_id, "តើអ្នកចង់ប្រើប្រាស់កាលបរិច្ឆេទថ្ងៃណាសម្រាប់វិក្កយបត្រនេះ?", reply_markup=date_markup)
 
 def generate_invoice(message):
     bot.reply_to(message, "កំពុងរៀបចំវិក្កយបត្រ A4 របស់អ្នក... ⏳")
@@ -178,7 +202,11 @@ def generate_invoice(message):
     table_rows = ""
     total_usd = 0.0
     count = 1
+    
+    # ទាញយកកាលបរិច្ឆេទដែលបានជ្រើសរើសពីប៊ូតុងមុននេះ
     invoice_date = ""
+    if hasattr(bot, 'temp_dates') and chat_id in bot.temp_dates:
+        invoice_date = bot.temp_dates[chat_id]
     
     for line in lines:
         line_clean = line.strip()
@@ -344,7 +372,7 @@ def generate_invoice(message):
             reply_markup=get_main_menu_keyboard()
         )
     except Exception as e:
-        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងการបង្កើត PDF: {e}", reply_markup=get_main_menu_keyboard())
+        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}", reply_markup=get_main_menu_keyboard())
 
 if __name__ == "__main__":
     threading.Thread(target=run_web_server).start()
