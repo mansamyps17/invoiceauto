@@ -482,10 +482,13 @@ def generate_invoice(message):
         pdf_filename_disk = f"invoice_{chat_id}.pdf"
         HTML(string=html_content).write_pdf(pdf_filename_disk)
         
+        # បំប្លែងឈ្មោះជា utf-8 bytes ឱ្យត្រូវស្តង់ដារ Telegram API multipart file upload
+        encoded_file_name = file_name_final.encode('utf-8')
+        
         with open(pdf_filename_disk, 'rb') as f:
             bot.send_document(
                 message.chat.id, 
-                document=(file_name_final, f),
+                document=(encoded_file_name, f),
                 caption=f"វិក្កយបត្រ `{file_name_final}` របស់អ្នកបានបង្កើតរួចរាល់ហើយ! 🎉",
                 parse_mode="Markdown",
                 reply_markup=get_main_menu_keyboard()
