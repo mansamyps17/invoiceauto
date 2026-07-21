@@ -13,7 +13,7 @@ bot = telebot.TeleBot(API_TOKEN)
 user_logos = {}
 user_attachments = {}
 user_titles = {}
-user_pdf_names = {} # រក្សាទុកឈ្មោះ File PDF របស់អ្នកប្រើនីមួយៗ
+user_pdf_names = {}
 
 app = Flask(__name__)
 
@@ -25,7 +25,6 @@ def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# ប៊ូតុងមេ (Main Menu)
 def get_main_menu_keyboard():
     markup = InlineKeyboardMarkup()
     markup.row_width = 2
@@ -45,7 +44,6 @@ def send_welcome(message):
     text = "សួស្តី! សូមជ្រើសរើសជម្រើសខាងក្រោមដើម្បីចាប់ផ្តើម៖"
     bot.reply_to(message, text, reply_markup=get_main_menu_keyboard())
 
-# គ្រប់គ្រងການចុចលើប៊ូតុង
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
     chat_id = call.message.chat.id
@@ -71,13 +69,13 @@ def callback_query(call):
         date_text = f" (កាលបរិច្ឆេទ៖ {selected_date})" if selected_date else " (អត់មានដាក់ថ្ងៃទី)"
         msg = bot.send_message(
             chat_id,
-            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់។\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមកតាមទម្រង់នេះ៖\n(ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ)\n\nឧទាហរណ៍៖\nកៅអី - 2 - ដុំ - 15$\nតុ - 1 - bộ - 20000៛"
+            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់។\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏បាន)៖\n\nឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\nឧទាហរណ៍ ២៖ តុ - 20000៛\nឧទាហរណ៍ ៣៖ ប៊ិច - 1.5$"
         )
         bot.register_next_step_handler(msg, generate_invoice)
         
     elif call.data == 'btn_setfilename':
         bot.answer_callback_query(call.id)
-        msg = bot.reply_to(call.message, "📁 សូមវាយបញ្ចូលឈ្មោះ File PDF ដែលអ្នកចង់បាន (ឧទាហរណ៍៖ Invoice_001 ឬ វិក្កយបត្រ_ហាងយើងខ្ញុំ)៖")
+        msg = bot.reply_to(call.message, "📁 សូមវាយបញ្ចូលឈ្មោះ File PDF ដែលអ្នកចង់បាន៖")
         bot.register_next_step_handler(msg, save_pdf_filename)
         
     elif call.data == 'btn_settitle':
@@ -111,7 +109,6 @@ def callback_query(call):
             user_attachments[chat_id] = []
         bot.send_message(chat_id, "🗑 បានលុបរូប Attachment ទាំងអស់រួចរាល់!", reply_markup=get_main_menu_keyboard())
 
-# មុខងាររក្សាទុកឈ្មោះ File PDF
 @bot.message_handler(commands=['setfilename'])
 def ask_pdf_filename(message):
     msg = bot.reply_to(message, "📁 សូមវាយបញ្ចូលឈ្មោះ File PDF ដែលអ្នកចង់បាន៖")
@@ -120,7 +117,6 @@ def ask_pdf_filename(message):
 def save_pdf_filename(message):
     chat_id = message.chat.id
     if message.text:
-        # លុបសញ្ញាខុសប្លែកដែលអាចប៉ះពាល់ដល់ឈ្មោះឯកសារ
         clean_name = re.sub(r'[\\/*?:"<>|]', "", message.text.strip())
         user_pdf_names[chat_id] = clean_name
         bot.reply_to(message, f"✅ បានកំណត់ឈ្មោះ File PDF ជា៖ **{clean_name}.pdf** ជោគជ័យ!", reply_markup=get_main_menu_keyboard())
@@ -233,10 +229,25 @@ def generate_invoice(message):
         if '-' in line_clean:
             parts = [p.strip() for p in line_clean.split('-')]
             
-            item_name = parts[0] if len(parts) > 0 else ""
-            qty_str = parts[1] if len(parts) > 1 else "1"
-            unit_str = parts[2] if len(parts) > 2 else ""
-            price_str = parts[3].lower() if len(parts) > 3 else "0$"
+            item_name = ""
+            qty_str = "1"
+            unit_str = ""
+            price_str = "0$"
+            
+            # ករណីបំពេញពេញលេញ (ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ)
+            if len(parts) >= 4:
+                item_name = parts[0]
+                qty_str = parts[1]
+                unit_str = parts[2]
+                price_str = parts[3].lower()
+            # ករណីបំពេញតែ (ឈ្មោះ - តម្លៃ) ឧ. កៅអី - 15$ ឬ តុ - 20000៛
+            elif len(parts) == 2:
+                item_name = parts[0]
+                qty_str = "1"
+                unit_str = ""
+                price_str = parts[1].lower()
+            else:
+                continue
                 
             numbers = re.findall(r"[-+]?(?:\d*\.\d+|\d+)", price_str)
             if numbers:
@@ -275,7 +286,6 @@ def generate_invoice(message):
     current_title = user_titles.get(chat_id, "បញ្ជីទិញឥវ៉ាន់")
     date_html = f'<p class="invoice-date"><b>កាលបរិច្ឆេទ / Date:</b> {invoice_date}</p>' if invoice_date else ''
 
-    # កំណត់ឈ្មោះឯកសារ PDF (បើ User មិនបានតັ້ງ ប្រើ "Invoice_A4" ជាលំនាំដើម)
     custom_pdf_name = user_pdf_names.get(chat_id, "Invoice_A4")
     file_name_final = f"{custom_pdf_name}.pdf"
 
@@ -389,7 +399,7 @@ def generate_invoice(message):
             reply_markup=get_main_menu_keyboard()
         )
     except Exception as e:
-        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}", reply_markup=get_main_menu_keyboard())
+        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងการបង្កើត PDF: {e}", reply_markup=get_main_menu_keyboard())
 
 if __name__ == "__main__":
     threading.Thread(target=run_web_server).start()
