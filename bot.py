@@ -8,7 +8,6 @@ import re
 API_TOKEN = os.environ.get('BOT_TOKEN', '8878587093:AAFncmD_3pLSir1paGSUgkzPhNhL4oO40Hg') 
 bot = telebot.TeleBot(API_TOKEN)
 
-# រក្សាទុកទិន្នន័យដាច់ដោយឡែកពីគ្នាសម្រាប់ User ម្នាក់ៗ
 user_logos = {}
 user_attachments = {}
 user_titles = {}
@@ -23,7 +22,6 @@ def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# ១. មុខងារកែប្រែចំណងជើងវិក្កយបត្រ (ដាច់ដោយឡែកពីគ្នា)
 @bot.message_handler(commands=['settitle'])
 def ask_title(message):
     msg = bot.reply_to(message, "✏️ សូមវាយបញ្ចូលចំណងជើងថ្មីសម្រាប់វិក្កយបត្ររបស់អ្នក៖")
@@ -33,11 +31,10 @@ def save_title(message):
     chat_id = message.chat.id
     if message.text:
         user_titles[chat_id] = message.text.strip()
-        bot.reply_to(message, f"✅ បានផ្លាស់ប្តូរចំណងជើងរបស់អ្នកទៅជា៖ **{user_titles[chat_id]}**")
+        bot.reply_to(message, f"✅ បានផ្លាស់ប្តូរចំណងជើងទៅជា៖ **{user_titles[chat_id]}**")
     else:
-        bot.reply_to(message, "❌ សូមបញ្ចូលអត្ថបទជាអក្សរ။")
+        bot.reply_to(message, "❌ សូមបញ្ចូលអត្ថបទជាអក្សរ។")
 
-# ២. មុខងារគ្រប់គ្រង Logo (អាចកែ និងលុបចេញបានដោយមិនពាក់ព័ន្ធគណនីផ្សេង)
 @bot.message_handler(commands=['clearlogo'])
 def clear_logo(message):
     chat_id = message.chat.id
@@ -51,7 +48,7 @@ def clear_logo(message):
 
 @bot.message_handler(commands=['setlogo'])
 def ask_logo(message):
-    msg = bot.reply_to(message, "🖼 សូមផ្ញើរូបភាព Logo ផ្ទាល់ខ្លួនของคุณ៖")
+    msg = bot.reply_to(message, "🖼 សូមផ្ញើរូបភាព Logo ផ្ទាល់ខ្លួនរបស់អ្នក៖")
     bot.register_next_step_handler(msg, save_logo)
 
 def save_logo(message):
@@ -72,7 +69,6 @@ def save_logo(message):
     else:
         bot.reply_to(message, "❌ សូមផ្ញើជារូបភាពប៉ុណ្ណោះ។")
 
-# ៣. មុខងារគ្រប់គ្រង Attachment (ដាច់ដោយឡែកពីគ្នា)
 @bot.message_handler(commands=['clearattachment'])
 def clear_attachment(message):
     chat_id = message.chat.id
@@ -115,19 +111,24 @@ def collect_attachments(message):
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     text = """
-សួស្តី! បញ្ជាដែលអ្នកអាចប្រើបាន (ទិន្នន័យដាច់ដោយឡែកពីគ្នាសម្រាប់អ្នកប្រើនីមួយៗ)៖
-/invoice - បង្កើតវិក្កយបត្រ A4 (ប្តូររៀលជាដុល្លារ 1$=4000៛)
+សួស្តី! បញ្ជាដែលអ្នកអាចប្រើបាន៖
+/invoice - បង្កើតវិក្កយបត្រ A4
 /settitle - កែប្រែចំណងជើងវិក្កយបត្រ
-/setlogo - កំណត់ ឬប្តូរ Logo ផ្ទាល់ខ្លួន
+/setlogo - កំណត់ ឬប្តូរ Logo
 /clearlogo - លុប Logo ចោល
-/clearattachment - លុបរូប Attachment ចាស់ចោល
-/addattachment - បន្ថែមរូបភាព Attachment ថ្មី (ដាក់ ២ ជួរស្អាត)
+/clearattachment - លុបរូប Attachment
+/addattachment - បន្ថែមរូបភាព Attachment (២ ជួរធំទូលាយ)
     """
     bot.reply_to(message, text)
 
 @bot.message_handler(commands=['invoice'])
 def ask_for_items(message):
-    text = "សូមបញ្ចូលមុខទំនិញ និងតម្លៃ (អាចបញ្ចូលជាដុល្លារ ឬរៀល)៖\nឧទាហរណ៍៖\nកៅអី - 15$\nតុ - 20000៛"
+    text = """សូមបញ្ចូលទិន្នន័យតាមទម្រង់ថ្មី (ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ - កាលបរិច្ឆេទ)៖
+
+ឧទាហរណ៍៖
+កៅអី - 2 - ដុំ - 15$ - 21-07-2026
+តុ - 1 - bộ - 20000៛ - 22-07-2026
+    """
     msg = bot.reply_to(message, text)
     bot.register_next_step_handler(msg, generate_invoice)
 
@@ -141,47 +142,79 @@ def generate_invoice(message):
     table_rows = ""
     total_usd = 0.0
     count = 1
+    first_date = ""
     
     for line in lines:
-        if '-' in line:
-            parts = line.split('-', 1)
-            item_name = parts[0].strip()
-            price_str = parts[1].strip().lower()
+        line_clean = line.strip()
+        if not line_clean:
+            continue
             
+        if '-' in line_clean:
+            parts = [p.strip() for p in line_clean.split('-')]
+            
+            # ករណីទម្រង់ពេញលេញ: ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ - កាលបរិច្ឆេទ
+            if len(parts) >= 5:
+                item_name = parts[0]
+                qty_str = parts[1]
+                unit_str = parts[2]
+                price_str = parts[3].lower()
+                date_str = parts[4]
+                if not first_date:
+                    first_date = date_str # យកកាលបរិច្ឆេទជួរទី១ មកបង្ហាញលើវិក្កយបត្រ
+            # ករណីទម្រង់ ៤ ចំណុច: ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ (អត់មានថ្ងៃខែ)
+            elif len(parts) == 4:
+                item_name = parts[0]
+                qty_str = parts[1]
+                unit_str = parts[2]
+                price_str = parts[3].lower()
+            # ករណីទម្រង់ចាស់: ឈ្មោះ - តម្លៃ
+            elif len(parts) == 2:
+                item_name = parts[0]
+                qty_str = "1"
+                unit_str = ""
+                price_str = parts[1].lower()
+            else:
+                continue
+                
+            # ទាញយកតួលេខតម្លៃ
             numbers = re.findall(r"[-+]?(?:\d*\.\d+|\d+)", price_str)
             if numbers:
                 val = float(numbers[0])
                 final_usd = 0.0
                 
+                # ប្តូររៀលជាដុល្លារ (1$ = 4000៛)
                 if '៛' in price_str or 'រៀល' in price_str or 'riel' in price_str:
                     final_usd = val / 4000.0
                 else:
                     final_usd = val
                 
-                total_usd += final_usd
+                qty_numbers = re.findall(r"[-+]?(?:\d*\.\d+|\d+)", qty_str)
+                qty_val = float(qty_numbers[0]) if qty_numbers else 1.0
+                
+                row_total = final_usd * qty_val
+                total_usd += row_total
                 
                 table_rows += f"""
                 <tr>
                     <td>{count}</td>
                     <td class="text-left">{item_name}</td>
-                    <td>1</td>
-                    <td></td>
+                    <td>{qty_str}</td>
+                    <td>{unit_str}</td>
                     <td>$ {final_usd:,.2f}</td>
-                    <td>$ {final_usd:,.2f}</td>
+                    <td>$ {row_total:,.2f}</td>
                     <td></td>
                 </tr>
                 """
                 count += 1
 
-    # ត្រួតពិនិត្យ Logo របស់ User ម្នាក់ៗដាច់ដោយឡែក
     logo_html = ""
     if chat_id in user_logos and os.path.exists(user_logos[chat_id]):
         logo_path = os.path.abspath(user_logos[chat_id])
         logo_html = f'<img src="file://{logo_path}" class="logo" alt="Logo">'
     
     current_title = user_titles.get(chat_id, "បញ្ជីទិញឥវ៉ាន់")
+    date_html = f'<p class="invoice-date"><b>កាលបរិច្ឆេទ / Date:</b> {first_date}</p>' if first_date else ''
 
-    # ត្រួតពិនិត្យ Attachment របស់ User ម្នាក់ៗដាច់ដោយឡែក
     attachments_html = ""
     if chat_id in user_attachments and user_attachments[chat_id]:
         attachments_html += '<div class="attachment-section"><p class="attachment-title">ឯកសារភ្ជាប់ (Attachments):</p><table class="img-table"><tr>'
@@ -213,27 +246,28 @@ def generate_invoice(message):
             
             body {{ font-family: 'LocalBattambang', sans-serif; font-size: 13px; color: #000; }}
             
-            .header-container {{ text-align: center; margin-bottom: 20px; position: relative; height: 80px; }}
+            .header-container {{ text-align: center; margin-bottom: 10px; position: relative; height: 80px; }}
             .logo {{ max-height: 80px; max-width: 200px; object-fit: contain; position: absolute; left: 0; top: 0; }}
-            h2 {{ color: #000; margin-top: 20px; font-weight: 700; font-size: 20px; text-decoration: underline; }}
+            h2 {{ color: #000; margin-top: 15px; font-weight: 700; font-size: 20px; text-decoration: underline; }}
+            .invoice-date {{ text-align: right; font-size: 13px; margin-bottom: 10px; }}
             
-            table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
             th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }}
             th {{ background-color: #f0f0f0; font-weight: 700; }}
-            .text-left {{ text-align: left; }}
+            .text-left {{ text-align: left; padding-left: 8px; }}
             .text-right {{ text-align: right; padding-right: 15px; }}
             .total-row td {{ font-weight: bold; background-color: #eef2f5; font-size: 14px; }}
             
-            .signatures {{ margin-top: 30px; width: 100%; display: table; }}
+            .signatures {{ margin-top: 35px; width: 100%; display: table; }}
             .sig-box {{ display: table-cell; text-align: center; width: 50%; font-weight: bold; }}
             .sig-line {{ margin-top: 60px; }}
             
             .attachment-section {{ margin-top: 25px; page-break-inside: avoid; }}
             .attachment-title {{ font-weight: bold; margin-bottom: 8px; text-decoration: underline; font-size: 12px; }}
             .img-table {{ width: 100%; border-collapse: collapse; border: none; }}
-            .img-table td {{ border: none; padding: 5px; vertical-align: middle; text-align: center; }}
+            .img-table td {{ border: none; padding: 6px; vertical-align: middle; text-align: center; }}
             .img-cell {{ width: 50%; }}
-            .attachment-img {{ max-width: 90%; max-height: 180px; object-fit: contain; border: 1px solid #ccc; padding: 3px; background-color: #fafafa; }}
+            .attachment-img {{ max-width: 95%; max-height: 250px; object-fit: contain; border: 1px solid #ccc; padding: 4px; background-color: #fafafa; }}
         </style>
     </head>
     <body>
@@ -242,15 +276,17 @@ def generate_invoice(message):
             <h2>{current_title}</h2>
         </div>
         
+        {date_html}
+        
         <table>
             <thead>
                 <tr>
                     <th style="width: 5%;">លរ</th>
-                    <th style="width: 40%;">បរិយាយ</th>
+                    <th style="width: 38%;">បរិយាយ</th>
                     <th style="width: 10%;">បរិមាណ</th>
                     <th style="width: 10%;">ឯកតា</th>
-                    <th style="width: 12%;">តម្លៃ ($)</th>
-                    <th style="width: 13%;">តម្លៃសរុប ($)</th>
+                    <th style="width: 13%;">តម្លៃ ($)</th>
+                    <th style="width: 14%;">តម្លៃសរុប ($)</th>
                     <th style="width: 10%;">ផ្សេងៗ</th>
                 </tr>
             </thead>
@@ -285,7 +321,7 @@ def generate_invoice(message):
         bot.send_document(
             message.chat.id, 
             document=('Invoice_A4.pdf', pdf_file),
-            caption="វិក្កយបត្រ A4 របស់អ្នករួចរាល់ហើយ! 🎉"
+            caption="វិក្កយបត្រ A4 របស់អ្នកត្រូវបានបង្កើតដោយជោគជ័យ! 🎉"
         )
     except Exception as e:
         bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}")
