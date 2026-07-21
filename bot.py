@@ -6,7 +6,7 @@ import threading
 import os
 import re
 
-API_TOKEN = os.environ.get('BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE') 
+API_TOKEN = os.environ.get('BOT_TOKEN', '8878587093:AAFncmD_3pLSir1paGSUgkzPhNhL4oO40Hg') 
 bot = telebot.TeleBot(API_TOKEN)
 
 user_logos = {}
