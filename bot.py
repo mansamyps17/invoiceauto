@@ -1,11 +1,12 @@
 import telebot
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from weasyprint import HTML
 from flask import Flask
 import threading
 import os
 import re
 
-API_TOKEN = os.environ.get('BOT_TOKEN', '8878587093:AAFncmD_3pLSir1paGSUgkzPhNhL4oO40Hg') 
+API_TOKEN = os.environ.get('BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE') 
 bot = telebot.TeleBot(API_TOKEN)
 
 user_logos = {}
@@ -22,6 +23,72 @@ def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
+# មុខងារបង្កើតប៊ូតុងបញ្ជា (Inline Keyboard)
+def get_main_menu_keyboard():
+    markup = InlineKeyboardMarkup()
+    markup.row_width = 2
+    markup.add(
+        InlineKeyboardButton("📄 បង្កើតវិក្កយបត្រ", callback_data='btn_invoice'),
+        InlineKeyboardButton("✏️ ដូរចំណងជើង", callback_data='btn_settitle'),
+        InlineKeyboardButton("🖼 កំណត់ Logo", callback_data='btn_setlogo'),
+        InlineKeyboardButton("🗑 លុប Logo", callback_data='btn_clearlogo'),
+        InlineKeyboardButton("📎 បន្ថែម Attachment", callback_data='btn_addattachment'),
+        InlineKeyboardButton("🗑 លុប Attachment", callback_data='btn_clearattachment')
+    )
+    return markup
+
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    text = "សួស្តី! សូមជ្រើសរើសជម្រើសខាងក្រោមដើម្បីចាប់ផ្តើម៖"
+    bot.reply_to(message, text, reply_markup=get_main_menu_keyboard())
+
+# គ្រប់គ្រងការចុចលើប៊ូតុង (Callback Query)
+@bot.callback_query_handler(func=lambda call: True)
+def callback_query(call):
+    chat_id = call.message.chat.id
+    
+    if call.data == 'btn_invoice':
+        bot.answer_callback_query(call.id)
+        msg = bot.reply_to(call.message, """សូមបញ្ចូលទិន្នន័យតាមទម្រង់៖
+(ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ)
+
+ឧទាហរណ៍៖
+កៅអី - 2 - ដុំ - 15$
+តុ - 1 - bộ - 20000៛""")
+        bot.register_next_step_handler(msg, generate_invoice)
+        
+    elif call.data == 'btn_settitle':
+        bot.answer_callback_query(call.id)
+        msg = bot.reply_to(call.message, "✏️ សូមវាយបញ្ចូលចំណងជើងថ្មីសម្រាប់វិក្កយបត្ររបស់អ្នក៖")
+        bot.register_next_step_handler(msg, save_title)
+        
+    elif call.data == 'btn_setlogo':
+        bot.answer_callback_query(call.id)
+        msg = bot.reply_to(call.message, "🖼 សូមផ្ញើរូបភាព Logo ផ្ទាល់ខ្លួនរបស់អ្នក៖")
+        bot.register_next_step_handler(msg, save_logo)
+        
+    elif call.data == 'btn_clearlogo':
+        bot.answer_callback_query(call.id)
+        if chat_id in user_logos and os.path.exists(user_logos[chat_id]):
+            try:
+                os.remove(user_logos[chat_id])
+            except:
+                pass
+            del user_logos[chat_id]
+        bot.send_message(chat_id, "🗑 បានលុប Logo ចោលរួចរាល់!", reply_markup=get_main_menu_keyboard())
+        
+    elif call.data == 'btn_addattachment':
+        bot.answer_callback_query(call.id)
+        msg = bot.reply_to(call.message, "📎 សូមផ្ញើរូប Attachment ចូលមក (ផ្ញើច្រើនបាន)។ វាយ /done ពេលរួចរាល់៖")
+        bot.register_next_step_handler(msg, collect_attachments)
+        
+    elif call.data == 'btn_clearattachment':
+        bot.answer_callback_query(call.id)
+        if chat_id in user_attachments:
+            user_attachments[chat_id] = []
+        bot.send_message(chat_id, "🗑 បានលុបរូប Attachment ទាំងអស់រួចរាល់!", reply_markup=get_main_menu_keyboard())
+
+# មុខងារបញ្ជាតាម Command ធម្មតា (រក្សាទុករួមគ្នា)
 @bot.message_handler(commands=['settitle'])
 def ask_title(message):
     msg = bot.reply_to(message, "✏️ សូមវាយបញ្ចូលចំណងជើងថ្មីសម្រាប់វិក្កយបត្ររបស់អ្នក៖")
@@ -31,20 +98,9 @@ def save_title(message):
     chat_id = message.chat.id
     if message.text:
         user_titles[chat_id] = message.text.strip()
-        bot.reply_to(message, f"✅ បានផ្លាស់ប្តូរចំណងជើងទៅជា៖ {user_titles[chat_id]}")
+        bot.reply_to(message, f"✅ បានផ្លាស់ប្តូរចំណងជើងទៅជា៖ {user_titles[chat_id]}", reply_markup=get_main_menu_keyboard())
     else:
         bot.reply_to(message, "❌ សូមបញ្ចូលអត្ថបទជាអក្សរ។")
-
-@bot.message_handler(commands=['clearlogo'])
-def clear_logo(message):
-    chat_id = message.chat.id
-    if chat_id in user_logos and os.path.exists(user_logos[chat_id]):
-        try:
-            os.remove(user_logos[chat_id])
-        except:
-            pass
-        del user_logos[chat_id]
-    bot.reply_to(message, "🗑 បានលុប Logo រួចរាល់!")
 
 @bot.message_handler(commands=['setlogo'])
 def ask_logo(message):
@@ -63,18 +119,11 @@ def save_logo(message):
                 new_file.write(downloaded_file)
                 
             user_logos[chat_id] = logo_name
-            bot.reply_to(message, "✅ រក្សាទុក Logo ជោគជ័យ!")
+            bot.reply_to(message, "✅ រក្សាទុក Logo ជោគជ័យ!", reply_markup=get_main_menu_keyboard())
         except Exception as e:
             bot.reply_to(message, f"❌ មានបញ្ហា: {e}")
     else:
         bot.reply_to(message, "❌ សូមផ្ញើជារូបភាពប៉ុណ្ណោះ។")
-
-@bot.message_handler(commands=['clearattachment'])
-def clear_attachment(message):
-    chat_id = message.chat.id
-    if chat_id in user_attachments:
-        user_attachments[chat_id] = []
-    bot.reply_to(message, "🗑 បានលុបរូប Attachment ទាំងអស់រួចរាល់!")
 
 @bot.message_handler(commands=['addattachment'])
 def ask_attachment(message):
@@ -85,7 +134,7 @@ def collect_attachments(message):
     chat_id = message.chat.id
     if message.text and message.text.lower() == '/done':
         count = len(user_attachments.get(chat_id, []))
-        bot.reply_to(message, f"✅ រក្សាទុក Attachment ចំនួន {count} សន្លឹកជោគជ័យ!")
+        bot.reply_to(message, f"✅ រក្សាទុក Attachment ចំនួន {count} សន្លឹកជោគជ័យ!", reply_markup=get_main_menu_keyboard())
         return
 
     if message.photo:
@@ -108,31 +157,19 @@ def collect_attachments(message):
         msg = bot.reply_to(message, "សូមផ្ញើជារូបភាព ឬវាយ /done ដើម្បីបញ្ចប់។")
         bot.register_next_step_handler(msg, collect_attachments)
 
-@bot.message_handler(commands=['start', 'help'])
-def send_welcome(message):
-    text = """សួស្តី! ពាក្យបញ្ជាដែលអ្នកអាចប្រើ៖
-
-/invoice - បង្កើតវិក្កយបត្រ A4
-/settitle - កែប្រែចំណងជើង
-/setlogo - កំណត់ ឬប្តូរ Logo
-/clearlogo - លុប Logo ចោល
-/clearattachment - លុបរូប Attachment
-/addattachment - បន្ថែមរូប Attachment"""
-    bot.reply_to(message, text)
-
 @bot.message_handler(commands=['invoice'])
 def ask_for_items(message):
     text = """សូមបញ្ចូលទិន្នន័យតាមទម្រង់នេះ៖
 (ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ)
 
 ឧទាហរណ៍៖
-កៅអី - 2 - ឈុត - 15$
-តុ - 1 - ឈុត - 20000៛"""
+កៅអី - 2 - ដុំ - 15$
+តុ - 1 - bộ - 20000៛"""
     msg = bot.reply_to(message, text)
     bot.register_next_step_handler(msg, generate_invoice)
 
 def generate_invoice(message):
-    bot.reply_to(message, "កំពុងរៀបចំវិក្កយបត្រ  របស់អ្នក... ⏳")
+    bot.reply_to(message, "កំពុងរៀបចំវិក្កយបត្រ A4 របស់អ្នក... ⏳")
     
     chat_id = message.chat.id
     user_input = message.text
@@ -303,10 +340,11 @@ def generate_invoice(message):
         bot.send_document(
             message.chat.id, 
             document=('Invoice_A4.pdf', pdf_file),
-            caption="វិក្កយបត្រ របស់អ្នកបានបង្កើតរួចរាល់ហើយ! 🎉"
+            caption="វិក្កយបត្រ A4 របស់អ្នកបានបង្កើតរួចរាល់ហើយ! 🎉",
+            reply_markup=get_main_menu_keyboard()
         )
     except Exception as e:
-        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}")
+        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងการបង្កើត PDF: {e}", reply_markup=get_main_menu_keyboard())
 
 if __name__ == "__main__":
     threading.Thread(target=run_web_server).start()
