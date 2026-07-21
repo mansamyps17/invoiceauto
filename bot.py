@@ -31,7 +31,7 @@ def save_title(message):
     chat_id = message.chat.id
     if message.text:
         user_titles[chat_id] = message.text.strip()
-        bot.reply_to(message, f"✅ បានផ្លាស់ប្តូរចំណងជើងទៅជា៖ **{user_titles[chat_id]}**")
+        bot.reply_to(message, f"✅ បានផ្លាស់ប្តូរចំណងជើងទៅជា៖ {user_titles[chat_id]}")
     else:
         bot.reply_to(message, "❌ សូមបញ្ចូលអត្ថបទជាអក្សរ។")
 
@@ -44,11 +44,11 @@ def clear_logo(message):
         except:
             pass
         del user_logos[chat_id]
-    bot.reply_to(message, "🗑 បានលុប Logo របស់អ្នកចេញរួចរាល់!")
+    bot.reply_to(message, "🗑 បានលុប Logo ចอกរួចរាល់!")
 
 @bot.message_handler(commands=['setlogo'])
 def ask_logo(message):
-    msg = bot.reply_to(message, "🖼 សូមផ្ញើរូបភាព Logo ផ្ទាល់ខ្លួនរបស់អ្នក៖")
+    msg = bot.reply_to(message, "🖼 សូមផ្ញើរូបភាព Logo របស់អ្នក៖")
     bot.register_next_step_handler(msg, save_logo)
 
 def save_logo(message):
@@ -63,7 +63,7 @@ def save_logo(message):
                 new_file.write(downloaded_file)
                 
             user_logos[chat_id] = logo_name
-            bot.reply_to(message, "✅ រក្សាទុក Logo របស់អ្នកជោគជ័យ!")
+            bot.reply_to(message, "✅ រក្សាទុក Logo ជោគជ័យ!")
         except Exception as e:
             bot.reply_to(message, f"❌ មានបញ្ហា: {e}")
     else:
@@ -74,18 +74,18 @@ def clear_attachment(message):
     chat_id = message.chat.id
     if chat_id in user_attachments:
         user_attachments[chat_id] = []
-    bot.reply_to(message, "🗑 បានលុបរូបភាព Attachment របស់អ្នកទាំងអស់រួចរាល់!")
+    bot.reply_to(message, "🗑 បានលុបរូប Attachment ទាំងអស់រួចរាល់!")
 
 @bot.message_handler(commands=['addattachment'])
 def ask_attachment(message):
-    msg = bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អាចផ្ញើច្រើនសន្លឹកដាក់ ២ ជួរ)។ វាយពាក្យ /done ពេលរួចរាល់៖")
+    msg = bot.reply_to(message, "📎 សូមផ្ញើរូប Attachment ចូលមក (ផ្ញើច្រើនបាន)។ វាយ /done ពេលរួចរាល់៖")
     bot.register_next_step_handler(msg, collect_attachments)
 
 def collect_attachments(message):
     chat_id = message.chat.id
     if message.text and message.text.lower() == '/done':
         count = len(user_attachments.get(chat_id, []))
-        bot.reply_to(message, f"✅ រក្សាទុក Attachment សរុបចំនួន {count} សន្លឹកជោគជ័យ!")
+        bot.reply_to(message, f"✅ រក្សាទុក Attachment ចំនួន {count} សន្លឹកជោគជ័យ!")
         return
 
     if message.photo:
@@ -100,7 +100,7 @@ def collect_attachments(message):
                 new_file.write(downloaded_file)
                 
             user_attachments[chat_id].append(img_name)
-            msg = bot.reply_to(message, f"📥 បានទទួល ១ សន្លឹកទៀត (សរុប: {len(user_attachments[chat_id])})។ ផ្ញើបន្ថែម ឬវាយ /done ដើម្បីបញ្ចប់។")
+            msg = bot.reply_to(message, f"📥 បានទទួល ១ សន្លឹក (សរុប: {len(user_attachments[chat_id])})។ ផ្ញើបន្ថែម ឬវាយ /done ។")
             bot.register_next_step_handler(msg, collect_attachments)
         except Exception as e:
             bot.reply_to(message, f"❌ មានបញ្ហា: {e}")
@@ -110,28 +110,24 @@ def collect_attachments(message):
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    text = """
-សួស្តី! បញ្ជាដែលអ្នកអាចប្រើได้៖
-/invoice - បង្កើតវិក្កយបត្រ A4 (មានកាលបរិច្ឆេទនៅផ្នែកខាងលើ)
-/settitle - កែប្រែចំណងជើងវិក្កយបត្រ
+    text = """សួស្តី! ពាក្យបញ្ជាដែលអ្នកអាចប្រើ៖
+
+/invoice - បង្កើតវិក្កយបត្រ A4
+/settitle - កែប្រែចំណងជើង
 /setlogo - កំណត់ ឬប្តូរ Logo
 /clearlogo - លុប Logo ចោល
 /clearattachment - លុបរូប Attachment
-/addattachment - បន្ថែមរូបភាព Attachment (២ ជួរធំទូលាយ)
-    """
+/addattachment - បន្ថែមរូប Attachment"""
     bot.reply_to(message, text)
 
 @bot.message_handler(commands=['invoice'])
 def ask_for_items(message):
-    text = """សូមបញ្ចូលទិន្នន័យតាមទម្រង់៖
-បន្ទាត់ទី១: Date: ថ្ងៃ-ខែ-ឆ្នាំ
-បន្ទាត់បន្ទាប់: ឈ្មោះទំនិញ - បរិមាណ - ឯកតា - តម្លៃ
+    text = """សូមបញ្ចូលទិន្នន័យតាមទម្រង់នេះ៖
+(ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ)
 
 ឧទាហរណ៍៖
-Date: 21-07-2026
-កៅอី - 2 - ដុំ - 15$
-តុ - 1 - bộ - 20000៛
-    """
+កៅអី - 2 - ដុំ - 15$
+តុ - 1 - bộ - 20000៛"""
     msg = bot.reply_to(message, text)
     bot.register_next_step_handler(msg, generate_invoice)
 
@@ -152,7 +148,6 @@ def generate_invoice(message):
         if not line_clean:
             continue
             
-        # ឆែករកមើលកាលបរិច្ឆេទវិក្កយបត្រនៅផ្នែកខាងលើ
         if line_clean.lower().startswith('date:'):
             invoice_date = line_clean.split(':', 1)[1].strip()
             continue
@@ -165,13 +160,11 @@ def generate_invoice(message):
             unit_str = parts[2] if len(parts) > 2 else ""
             price_str = parts[3].lower() if len(parts) > 3 else "0$"
                 
-            # ទាញយកតួលេខតម្លៃ
             numbers = re.findall(r"[-+]?(?:\d*\.\d+|\d+)", price_str)
             if numbers:
                 val = float(numbers[0])
                 final_usd = 0.0
                 
-                # ប្តូររៀលជាដុល្លារ (1$ = 4000៛)
                 if '៛' in price_str or 'រៀល' in price_str or 'riel' in price_str:
                     final_usd = val / 4000.0
                 else:
@@ -202,8 +195,6 @@ def generate_invoice(message):
         logo_html = f'<img src="file://{logo_path}" class="logo" alt="Logo">'
     
     current_title = user_titles.get(chat_id, "បញ្ជីទិញឥវ៉ាន់")
-    
-    # បង្ហាញកាលបរិច្ឆេទនៅផ្នែកខាងលើក្រោមចំណងជើង
     date_html = f'<p class="invoice-date"><b>កាលបរិច្ឆេទ / Date:</b> {invoice_date}</p>' if invoice_date else ''
 
     attachments_html = ""
@@ -312,7 +303,7 @@ def generate_invoice(message):
         bot.send_document(
             message.chat.id, 
             document=('Invoice_A4.pdf', pdf_file),
-            caption="វិក្កយបត្រ A4 របស់អ្នក (ដក Column ថ្ងៃខែចេញ និងដាក់កាលបរិច្ឆេទនៅផ្នែកខាងលើ) បានបង្កើតរួចរាល់ហើយ! 🎉"
+            caption="វិក្កយបត្រ A4 របស់អ្នកបានបង្កើតរួចរាល់ហើយ! 🎉"
         )
     except Exception as e:
         bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}")
