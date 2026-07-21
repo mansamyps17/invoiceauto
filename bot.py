@@ -44,7 +44,7 @@ def clear_logo(message):
         except:
             pass
         del user_logos[chat_id]
-    bot.reply_to(message, "🗑 បានលុប Logo ចอกរួចរាល់!")
+    bot.reply_to(message, "🗑 បានលុប Logo រួចរាល់!")
 
 @bot.message_handler(commands=['setlogo'])
 def ask_logo(message):
@@ -126,13 +126,13 @@ def ask_for_items(message):
 (ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ)
 
 ឧទាហរណ៍៖
-កៅអី - 2 - ដុំ - 15$
-តុ - 1 - bộ - 20000៛"""
+កៅអី - 2 - ឈុត - 15$
+តុ - 1 - ឈុត - 20000៛"""
     msg = bot.reply_to(message, text)
     bot.register_next_step_handler(msg, generate_invoice)
 
 def generate_invoice(message):
-    bot.reply_to(message, "កំពុងរៀបចំវិក្កយបត្រ A4 របស់អ្នក... ⏳")
+    bot.reply_to(message, "កំពុងរៀបចំវិក្កយបត្រ  របស់អ្នក... ⏳")
     
     chat_id = message.chat.id
     user_input = message.text
@@ -303,7 +303,7 @@ def generate_invoice(message):
         bot.send_document(
             message.chat.id, 
             document=('Invoice_A4.pdf', pdf_file),
-            caption="វិក្កយបត្រ A4 របស់អ្នកបានបង្កើតរួចរាល់ហើយ! 🎉"
+            caption="វិក្កយបត្រ របស់អ្នកបានបង្កើតរួចរាល់ហើយ! 🎉"
         )
     except Exception as e:
         bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}")
