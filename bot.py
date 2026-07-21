@@ -303,7 +303,7 @@ def generate_invoice(message):
     chat_id = message.chat.id
     if chat_id not in approved_users: return
     
-    bot.reply_to(message, "កំពុងរៀបចំវិក្កយបត្រ A4 របស់អ្នក... ⏳")
+    bot.reply_to(message, "កំពុងរៀបចំវិក្កយបត្រ របស់អ្នក... ⏳")
     
     user_input = message.text
     lines = user_input.split('\n')
@@ -473,11 +473,11 @@ def generate_invoice(message):
 
         <div class="signatures">
             <div class="sig-box">
-                <p>Prepared by:</p>
+                <p>រៀបចំដោយ:</p>
                 <p class="sig-line">...................................</p>
             </div>
             <div class="sig-box">
-                <p>Approved by:</p>
+                <p>ទទួលដោយ:</p>
                 <p class="sig-line">...................................</p>
             </div>
         </div>
