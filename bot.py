@@ -34,7 +34,7 @@ def get_main_menu_keyboard():
         InlineKeyboardButton("✏️ ដូរចំណងជើងវិក្កយបត្រ", callback_data='btn_settitle'),
         InlineKeyboardButton("🖼 កំណត់ Logo", callback_data='btn_setlogo'),
         InlineKeyboardButton("🗑 លុប Logo", callback_data='btn_clearlogo'),
-        InlineKeyboardButton("📎 បន្ថែម Attachment (ច្រើនសន្លឹក)", callback_data='btn_addattachment'),
+        InlineKeyboardButton("📎 បន្ថែម Attachment", callback_data='btn_addattachment'),
         InlineKeyboardButton("🗑 លុប Attachment", callback_data='btn_clearattachment')
     )
     return markup
@@ -69,7 +69,7 @@ def callback_query(call):
         date_text = f" (កាលបរិច្ឆេទ៖ {selected_date})" if selected_date else " (អត់មានដាក់ថ្ងៃទី)"
         msg = bot.send_message(
             chat_id,
-            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់។\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏ได้)៖\n\nឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\nឧទាហរណ៍ ២៖ តុ - 20000៛"
+            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់។\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏បាន)៖\n\nឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\nឧទាហរណ៍ ២៖ តុ - 20000៛"
         )
         bot.register_next_step_handler(msg, generate_invoice)
         
@@ -100,7 +100,10 @@ def callback_query(call):
         
     elif call.data == 'btn_addattachment':
         bot.answer_callback_query(call.id)
-        msg = bot.reply_to(call.message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អ្នកអាចជ្រើសរើសផ្ញើ **ច្រើនសន្លឹកព្រមគ្នា** បានតែម្តង)។ ផ្ញើរួចសូមវាយពាក្យ /done៖")
+        msg = bot.send_message(
+            chat_id, 
+            "📎 **របៀបបន្ថែម Attachment:**\nអ្នកអាចផ្ញើរូបភាពចូលមក **ច្រើនសន្លឹកព្រមគ្នា** បានយ៉ាងងាយស្រួល។ ពេលផ្ញើរួចរាល់ សូមវាយពាក្យ `/done` ដើម្បីបញ្ជាក់។"
+        )
         bot.register_next_step_handler(msg, collect_attachments)
         
     elif call.data == 'btn_clearattachment':
@@ -159,19 +162,22 @@ def save_logo(message):
     else:
         bot.reply_to(message, "❌ សូមផ្ញើជារូបភាពប៉ុណ្ណោះ។")
 
-# មុខងារទទួលរូបភាព Attachment អាចទទួលច្រើនសន្លឹកព្រមគ្នា និងតម្រៀបតាមលំដាប់លំដោយ
+# មុខងារទទួលរូបភាព Attachment ទាំងអស់គ្នាព្រមរហូតដល់វាយ /done
 @bot.message_handler(commands=['addattachment'])
 def ask_attachment(message):
-    msg = bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អ្នកអាចជ្រើសរើសផ្ញើ **ច្រើនសន្លឹកព្រមគ្នា** បាន)។ ផ្ញើរួចសូមវាយពាក្យ /done៖")
+    msg = bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អ្នកអាចផ្ញើច្រើនសន្លឹកព្រមគ្នាបាន)។ ផ្ញើរួចសូមវាយពាក្យ /done៖")
     bot.register_next_step_handler(msg, collect_attachments)
 
 def collect_attachments(message):
     chat_id = message.chat.id
+    
+    # ប្រសិនបើអ្នកប្រើវាយ /done គឺបញ្ចប់ការបញ្ជូនរូបភាព
     if message.text and message.text.lower() == '/done':
         count = len(user_attachments.get(chat_id, []))
         bot.reply_to(message, f"✅ រក្សាទុក Attachment សរុបចំនួន {count} សន្លឹកជោគជ័យ!", reply_markup=get_main_menu_keyboard())
         return
 
+    # ប្រសិនបើមានការផ្ញើរូបភាពចូលមក (អាចជាអាល់ប៊ុមច្រើនសន្លឹកព្រមគ្នា)
     if message.photo:
         if chat_id not in user_attachments:
             user_attachments[chat_id] = []
@@ -184,13 +190,15 @@ def collect_attachments(message):
                 new_file.write(downloaded_file)
                 
             user_attachments[chat_id].append(img_name)
-            # មិនបាច់ឆ្លើយតបគ្រប់សន្លឹកពេកទេ ដើម្បីកុំឱ្យរំខានពេលផ្ញើច្រើនសន្លឹកព្រមគ្នា
+            
+            # រង់ចាំទទួលសារបន្តទៀតរហូតដល់ /done
             msg = bot.reply_to(message, f"📥 បានទទួលទុករូបភាព (សរុប: {len(user_attachments[chat_id])} សន្លឹក)។ អាចផ្ញើបន្ថែមទៀត ឬវាយពាក្យ /done ដើម្បីបញ្ចប់។")
             bot.register_next_step_handler(msg, collect_attachments)
         except Exception as e:
             bot.reply_to(message, f"❌ មានបញ្ហា: {e}")
     else:
-        msg = bot.reply_to(message, "សូមផ្ញើជារូបភាព ឬវាយ /done ដើម្បីបញ្ចប់។")
+        # បើវាយខុសអត្ថបទ ឱ្យបន្តរង់ចាំដដែល
+        msg = bot.reply_to(message, "សូមផ្ញើរូបភាពបន្ថែម ឬវាយពាក្យ /done ដើម្បីបញ្ចប់។")
         bot.register_next_step_handler(msg, collect_attachments)
 
 @bot.message_handler(commands=['invoice'])
@@ -283,7 +291,6 @@ def generate_invoice(message):
         logo_path = os.path.abspath(user_logos[chat_id])
         logo_html = f'<img src="file://{logo_path}" class="logo" alt="Logo">'
     
-    # ផ្លាស់ប្តូរចំណងជើងលំនាំដើមមកជា "វិក្កយបត្រ"
     current_title = user_titles.get(chat_id, "វិក្កយបត្រ")
     date_html = f'<p class="invoice-date"><b>កាលបរិច្ឆេទ / Date:</b> {invoice_date}</p>' if invoice_date else ''
 
