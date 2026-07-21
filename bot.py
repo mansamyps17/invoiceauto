@@ -112,7 +112,7 @@ def collect_attachments(message):
 def send_welcome(message):
     text = """
 សួស្តី! បញ្ជាដែលអ្នកអាចប្រើបាន៖
-/invoice - បង្កើតវិក្កយបត្រ A4 (មាន Column កាលបរិច្ឆេទក្នុងតារាង)
+/invoice - បង្កើតវិក្កយបត្រ A4
 /settitle - កែប្រែចំណងជើងវិក្កយបត្រ
 /setlogo - កំណត់ ឬប្តូរ Logo
 /clearlogo - លុប Logo ចោល
@@ -154,8 +154,25 @@ def generate_invoice(message):
             item_name = parts[0] if len(parts) > 0 else ""
             qty_str = parts[1] if len(parts) > 1 else "1"
             unit_str = parts[2] if len(parts) > 2 else ""
-            price_str = parts[3].lower() if len(parts) > 3 else "0$"
-            date_str = parts[4] if len(parts) > 4 else ""
+            
+            # កែសម្រួលការចាប់យកតម្លៃ និងកាលបរិច្ឆេទពេញលេញ (Day-Month-Year)
+            price_str = ""
+            date_str = ""
+            
+            if len(parts) >= 6:
+                # ករណីថ្ងៃខែឆ្នាំមានសញ្ញាដក 2 រួមបញ្ចូលគ្នា (ឧ. 15$ - 21 - 07 - 2026)
+                price_str = parts[3].lower()
+                date_str = f"{parts[4]}-{parts[5]}-{parts[6]}" if len(parts) >= 7 else f"{parts[4]}-{parts[5]}"
+            elif len(parts) == 5:
+                # ករណីទម្រង់: ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ - 21-07-2026
+                price_str = parts[3].lower()
+                date_str = parts[4]
+            elif len(parts) == 4:
+                price_str = parts[3].lower()
+                date_str = ""
+            else:
+                price_str = parts[-1].lower() if len(parts) > 1 else "0$"
+                date_str = ""
                 
             # ទាញយកតួលេខតម្លៃ
             numbers = re.findall(r"[-+]?(?:\d*\.\d+|\d+)", price_str)
@@ -297,7 +314,7 @@ def generate_invoice(message):
         bot.send_document(
             message.chat.id, 
             document=('Invoice_A4.pdf', pdf_file),
-            caption="វិក្កយបត្រ A4 របស់អ្នក (មាន Column កាលបរិច្ឆេទក្នុងតារាង) បានបង្កើតរួចរាល់ហើយ! 🎉"
+            caption="វិក្កយបត្រ A4 របស់អ្នក (បង្ហាញថ្ងៃខែឆ្នាំពេញលេញក្នុងតារាង) បានបង្កើតរួចរាល់ហើយ! 🎉"
         )
     except Exception as e:
         bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}")
