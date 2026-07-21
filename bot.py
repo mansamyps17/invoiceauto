@@ -6,6 +6,7 @@ import threading
 import os
 import re
 from datetime import datetime
+from urllib.parse import quote
 
 API_TOKEN = os.environ.get('BOT_TOKEN', '8878587093:AAFncmD_3pLSir1paGSUgkzPhNhL4oO40Hg')
 bot = telebot.TeleBot(API_TOKEN)
@@ -273,7 +274,7 @@ def finish_attachment(message):
     if count > 0:
         bot.reply_to(message, f"✅ រក្សាទុក Attachment សរុបចំនួន {count} សន្លឹកជោគជ័យ!", reply_markup=get_main_menu_keyboard())
     else:
-        bot.reply_to(message, "⚠️ មិនទាន់មានរូបភាព Attachment ណាមួយត្រូវបានផ្ញើមកទេ។", reply_markup=get_main_menu_keyboard())
+        bot.reply_to(message, "⚠️ មិនទាន់មានរូបភាព Attachment ណាមួយត្រូវបានផ្ើមកទេ។", reply_markup=get_main_menu_keyboard())
 
 @bot.message_handler(commands=['invoice'])
 def ask_for_items_command(message):
@@ -480,15 +481,19 @@ def generate_invoice(message):
     
     try:
         pdf_file = HTML(string=html_content).write_pdf()
+        
+        # កែសម្រួលការencodeWith URL Quote ដើម្បីការពារការដាច់ខ្សែកម្រិត Byte របស់អក្សរខ្មែរ
+        encoded_filename = quote(file_name_final)
+        
         bot.send_document(
             message.chat.id, 
-            document=(file_name_final.encode('utf-8'), pdf_file),
+            document=(encoded_filename, pdf_file),
             caption=f"វិក្កយបត្រ `{file_name_final}` របស់អ្នកបានបង្កើតរួចរាល់ហើយ! 🎉",
             parse_mode="Markdown",
             reply_markup=get_main_menu_keyboard()
         )
     except Exception as e:
-        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}", reply_markup=get_main_menu_keyboard())
+        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងการបង្កើត PDF: {e}", reply_markup=get_main_menu_keyboard())
 
 if __name__ == "__main__":
     threading.Thread(target=run_web_server).start()
