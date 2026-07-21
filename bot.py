@@ -194,7 +194,8 @@ def ask_pdf_filename(message):
 def save_pdf_filename(message):
     chat_id = message.chat.id
     if message.text:
-        clean_name = re.sub(r'[\\/*?:"<>|]', "", message.text.strip())
+        raw_name = message.text.strip()
+        clean_name = re.sub(r'[\\/*?:"<>|]', "", raw_name)
         user_pdf_names[chat_id] = clean_name
         bot.reply_to(message, f"✅ បានកំណត់ឈ្មោះ File PDF ជា៖ **{clean_name}.pdf** ជោគជ័យ!", parse_mode="Markdown", reply_markup=get_main_menu_keyboard())
     else:
