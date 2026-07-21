@@ -9,6 +9,9 @@ import re
 API_TOKEN = os.environ.get('BOT_TOKEN', '8878587093:AAFncmD_3pLSir1paGSUgkzPhNhL4oO40Hg') 
 bot = telebot.TeleBot(API_TOKEN)
 
+# ទុកប្រព័ន្ធផ្ទុកឯកសាររូបភាព Attachment ច្រើនក្នុង List មួយសម្រាប់ User ម្នាក់ៗ
+user_attachments = {}
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -22,7 +25,7 @@ def run_web_server():
 # ២. មុខងារផ្លាស់ប្តូរ Logo
 @bot.message_handler(commands=['setlogo'])
 def ask_logo(message):
-    msg = bot.reply_to(message, "🖼 សូមផ្ញើរូបភាពដែលអ្នកចង់ដាក់ជា Logo (សូមផ្ញើជាទម្រង់រូបភាព/Photo):")
+    msg = bot.reply_to(message, "🖼 សូមផ្ញើរូបភាពដែលអ្នកចង់ដាក់ជា Logo:")
     bot.register_next_step_handler(msg, save_logo)
 
 def save_logo(message):
@@ -32,50 +35,64 @@ def save_logo(message):
             downloaded_file = bot.download_file(file_info.file_path)
             with open("logo.jpg", 'wb') as new_file:
                 new_file.write(downloaded_file)
-            bot.reply_to(message, "✅ រក្សាទុក Logo ជោគជ័យ! រាល់វិក្កយបត្រថ្មីនឹងប្រើ Logo នេះ។")
+            bot.reply_to(message, "✅ រក្សាទុក Logo ជោគជ័យ!")
         except Exception as e:
             bot.reply_to(message, f"❌ មានបញ្ហា: {e}")
     else:
-        bot.reply_to(message, "❌ សូមផ្ញើជារូបភាពប៉ុណ្ណោះ។ សូមវាយ /setlogo ម្តងទៀត។")
+        bot.reply_to(message, "❌ សូមផ្ញើជារូបភាពប៉ុណ្ណោះ។")
 
-# ៣. មុខងារផ្លាស់ប្តូរ Attachment
-@bot.message_handler(commands=['setattachment'])
+# ៣. មុខងារបន្ថែម Attachment ជាច្រើនសន្លឹក
+@bot.message_handler(commands=['addattachment'])
 def ask_attachment(message):
-    msg = bot.reply_to(message, "📎 សូមផ្ញើរូបភាពដែលអ្នកចង់ដាក់ជាឯកសារភ្ជាប់ (Attachment) នៅខាងក្រោម៖")
-    bot.register_next_step_handler(msg, save_attachment)
+    msg = bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អ្នកអាចផ្ញើជាបន្តបន្ទាប់បានច្រើនសន្លឹក)។ ពេលផ្ញើចប់ សូមវាយពាក្យ /done")
+    bot.register_next_step_handler(msg, collect_attachments)
 
-def save_attachment(message):
+def collect_attachments(message):
+    chat_id = message.chat.id
+    if message.text and message.text.lower() == '/done':
+        count = len(user_attachments.get(chat_id, []))
+        bot.reply_to(message, f"✅ បានរក្សាទុកឯកសារ Attachment ចំនួន {count} សន្លឹកជោគជ័យ!")
+        return
+
     if message.photo:
+        if chat_id not in user_attachments:
+            user_attachments[chat_id] = []
         try:
             file_info = bot.get_file(message.photo[-1].file_id)
             downloaded_file = bot.download_file(file_info.file_path)
-            with open("attachment.jpg", 'wb') as new_file:
+            
+            img_name = f"attachment_{chat_id}_{len(user_attachments[chat_id])}.jpg"
+            with open(img_name, 'wb') as new_file:
                 new_file.write(downloaded_file)
-            bot.reply_to(message, "✅ រក្សាទុក Attachment ជោគជ័យ!")
+                
+            user_attachments[chat_id].append(img_name)
+            msg = bot.reply_to(message, f"📥 បានទទួល ១ សន្លឹកទៀត (សរុប: {len(user_attachments[chat_id])} សន្លឹក)។ ផ្ញើបន្ថែមទៀត ឬវាយពាក្យ /done ដើម្បីបញ្ចប់។")
+            bot.register_next_step_handler(msg, collect_attachments)
         except Exception as e:
             bot.reply_to(message, f"❌ មានបញ្ហា: {e}")
     else:
-        bot.reply_to(message, "❌ សូមផ្ញើជារូបភាពប៉ុណ្ណោះ។ សូមវាយ /setattachment ម្តងទៀត។")
+        msg = bot.reply_to(message, "សូមផ្ញើជារូបភាព ឬវាយ /done ដើម្បីបញ្ចប់។")
+        bot.register_next_step_handler(msg, collect_attachments)
 
-# ៤. មុខងារស្វាគមន៍ និងបង្កើតវិក្កយបត្រ
+# ៤. មុខងារទូទៅ និងបង្កើតវិក្កយបត្រ
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     text = """
-សួស្តី! នេះជាបញ្ជាដែលអ្នកអាចប្រើបាន៖
-/invoice - បង្កើតវិក្កយបត្រ
-/setlogo - ផ្លាស់ប្តូរ Logo ខាងលើ
-/setattachment - ផ្លាស់ប្តូររូបភាពភ្ជាប់ខាងក្រោម
+សួស្តី! បញ្ជាដែលអ្នកអាចប្រើបាន៖
+/invoice - បង្កើតវិក្កយបត្រ A4 (ប្តូរប្រាក់រៀលជាដុល្លារស្វ័យប្រវត្តិ 1$=4000៛)
+/setlogo - កំណត់ Logo
+/addattachment - បន្ថែមរូបភាព Attachment ច្រើនសន្លឹក
     """
     bot.reply_to(message, text)
 
 @bot.message_handler(commands=['invoice'])
 def ask_for_items(message):
-    text = "សូមបញ្ចូលមុខទំនិញ និងតម្លៃ (ឈ្មោះទំនិញ - តម្លៃ)៖\nឧទាហរណ៍៖\nINVOICE 01 - 19.25$\nINVOICE 02 - 15.90$"
+    text = "សូមបញ្ចូលមុខទំនិញ និងតម្លៃ (អាចបញ្ចូលជាដុល្លារ ឬរៀល)៖\nឧទាហរណ៍៖\nកៅអី - 15$\nតុ - 20000៛\nប៊ិច - 4000រៀល"
     msg = bot.reply_to(message, text)
     bot.register_next_step_handler(msg, generate_invoice)
 
 def generate_invoice(message):
-    bot.reply_to(message, "កំពុងរៀបចំវិក្កយបត្រ សូមរង់ចាំបន្តិច... ⏳")
+    bot.reply_to(message, "កំពុងរៀបចំវិក្កយបត្រ និងប្តូរប្រាក់រៀលទៅជាដុល្លារ... ⏳")
     
     user_input = message.text
     lines = user_input.split('\n')
@@ -88,12 +105,23 @@ def generate_invoice(message):
         if '-' in line:
             parts = line.split('-', 1)
             item_name = parts[0].strip()
-            price_str = parts[1].strip()
+            price_str = parts[1].strip().lower()
             
+            # ទាញយកតួលេខ
             numbers = re.findall(r"[-+]?(?:\d*\.\d+|\d+)", price_str)
             if numbers:
-                price_val = float(numbers[0])
-                total_usd += price_val
+                val = float(numbers[0])
+                final_usd = 0.0
+                
+                # ឆែកមើលថាតើជា រៀល ឬ ដុល្លារ
+                if '៛' in price_str or 'រៀល' in price_str or 'riel' in price_str:
+                    # ប្តូររៀលទៅជាដុល្លារ (១ដុល្លារ = ៤០០០រៀល)
+                    final_usd = val / 4000.0
+                else:
+                    # ចាត់ទុកជាដុល្លារស្រាប់
+                    final_usd = val
+                
+                total_usd += final_usd
                 
                 table_rows += f"""
                 <tr>
@@ -101,28 +129,27 @@ def generate_invoice(message):
                     <td class="text-left">{item_name}</td>
                     <td>1</td>
                     <td></td>
-                    <td>$ {price_val:,.2f}</td>
-                    <td>$ {price_val:,.2f}</td>
+                    <td>$ {final_usd:,.2f}</td>
+                    <td>$ {final_usd:,.2f}</td>
                     <td></td>
                 </tr>
                 """
                 count += 1
 
-    # រៀបចំទីតាំងរូបភាព Logo និង Attachment បើមាន
+    # រៀបចំ Logo
     logo_path = os.path.abspath("logo.jpg")
-    attachment_path = os.path.abspath("attachment.jpg")
-    
     logo_html = f'<img src="file://{logo_path}" class="logo" alt="Logo">' if os.path.exists("logo.jpg") else ''
     
-    if os.path.exists("attachment.jpg"):
-        attachment_html = f"""
-        <div class="attachment-section">
-            <p class="attachment-title">ឯកសារភ្ជាប់ (Attachment):</p>
-            <img src="file://{attachment_path}" class="attachment-img" alt="Attachment">
-        </div>
-        """
-    else:
-        attachment_html = ""
+    # រៀបចំ Attachment ច្រើនសន្លឹក
+    chat_id = message.chat.id
+    attachments_html = ""
+    if chat_id in user_attachments and user_attachments[chat_id]:
+        attachments_html += '<div class="attachment-section"><p class="attachment-title">ឯកសារភ្ជាប់ (Attachments):</p>'
+        for img_file in user_attachments[chat_id]:
+            img_path = os.path.abspath(img_file)
+            if os.path.exists(img_path):
+                attachments_html += f'<img src="file://{img_path}" class="attachment-img" alt="Attachment">'
+        attachments_html += '</div>'
 
     html_content = f"""
     <!DOCTYPE html>
@@ -151,7 +178,7 @@ def generate_invoice(message):
             
             .attachment-section {{ margin-top: 40px; text-align: left; page-break-inside: avoid; }}
             .attachment-title {{ font-weight: bold; margin-bottom: 10px; text-decoration: underline; }}
-            .attachment-img {{ max-width: 90%; max-height: 300px; border: 1px dashed #ccc; padding: 5px; display: block; margin: 0 auto; }}
+            .attachment-img {{ max-width: 85%; max-height: 280px; border: 1px dashed #ccc; padding: 5px; display: block; margin: 10px auto; }}
         </style>
     </head>
     <body>
@@ -167,15 +194,15 @@ def generate_invoice(message):
                     <th style="width: 40%;">បរិយាយ</th>
                     <th style="width: 10%;">បរិមាណ</th>
                     <th style="width: 10%;">ឯកតា</th>
-                    <th style="width: 12%;">តម្លៃ</th>
-                    <th style="width: 13%;">តម្លៃសរុប</th>
+                    <th style="width: 12%;">តម្លៃ ($)</th>
+                    <th style="width: 13%;">តម្លៃសរុប ($)</th>
                     <th style="width: 10%;">ផ្សេងៗ</th>
                 </tr>
             </thead>
             <tbody>
                 {table_rows}
                 <tr class="total-row">
-                    <td colspan="5" class="text-right">សរុប</td>
+                    <td colspan="5" class="text-right">សរុបទឹកប្រាក់ (USD)</td>
                     <td>$ {total_usd:,.2f}</td>
                     <td></td>
                 </tr>
@@ -193,7 +220,7 @@ def generate_invoice(message):
             </div>
         </div>
 
-        {attachment_html}
+        {attachments_html}
     </body>
     </html>
     """
@@ -202,8 +229,8 @@ def generate_invoice(message):
         pdf_file = HTML(string=html_content).write_pdf()
         bot.send_document(
             message.chat.id, 
-            document=('Invoice.pdf', pdf_file),
-            caption="នេះគឺជាវិក្កយបត្ររបស់អ្នក! 🎉"
+            document=('Invoice_A4.pdf', pdf_file),
+            caption="នេះគឺជាវិក្កយបត្រ A4 របស់អ្នក! (ប្តូរប្រាក់រៀលជាដុល្លាររួចរាល់) 🎉"
         )
     except Exception as e:
         bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}")
