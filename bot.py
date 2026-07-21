@@ -112,7 +112,7 @@ def collect_attachments(message):
 def send_welcome(message):
     text = """
 សួស្តី! បញ្ជាដែលអ្នកអាចប្រើបាន៖
-/invoice - បង្កើតវិក្កយបត្រ A4
+/invoice - បង្កើតវិក្កយបត្រ A4 (មាន Column កាលបរិច្ឆេទក្នុងតារាង)
 /settitle - កែប្រែចំណងជើងវិក្កយបត្រ
 /setlogo - កំណត់ ឬប្តូរ Logo
 /clearlogo - លុប Logo ចោល
@@ -123,7 +123,7 @@ def send_welcome(message):
 
 @bot.message_handler(commands=['invoice'])
 def ask_for_items(message):
-    text = """សូមបញ្ចូលទិន្នន័យតាមទម្រង់ថ្មី (ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ - កាលបរិច្ឆេទ)៖
+    text = """សូមបញ្ចូលទិន្នន័យតាមទម្រង់ (ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ - កាលបរិច្ឆេទ)៖
 
 ឧទាហរណ៍៖
 កៅអី - 2 - ដុំ - 15$ - 21-07-2026
@@ -142,7 +142,6 @@ def generate_invoice(message):
     table_rows = ""
     total_usd = 0.0
     count = 1
-    first_date = ""
     
     for line in lines:
         line_clean = line.strip()
@@ -152,29 +151,11 @@ def generate_invoice(message):
         if '-' in line_clean:
             parts = [p.strip() for p in line_clean.split('-')]
             
-            # ករណីទម្រង់ពេញលេញ: ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ - កាលបរិច្ឆេទ
-            if len(parts) >= 5:
-                item_name = parts[0]
-                qty_str = parts[1]
-                unit_str = parts[2]
-                price_str = parts[3].lower()
-                date_str = parts[4]
-                if not first_date:
-                    first_date = date_str # យកកាលបរិច្ឆេទជួរទី១ មកបង្ហាញលើវិក្កយបត្រ
-            # ករណីទម្រង់ ៤ ចំណុច: ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ (អត់មានថ្ងៃខែ)
-            elif len(parts) == 4:
-                item_name = parts[0]
-                qty_str = parts[1]
-                unit_str = parts[2]
-                price_str = parts[3].lower()
-            # ករណីទម្រង់ចាស់: ឈ្មោះ - តម្លៃ
-            elif len(parts) == 2:
-                item_name = parts[0]
-                qty_str = "1"
-                unit_str = ""
-                price_str = parts[1].lower()
-            else:
-                continue
+            item_name = parts[0] if len(parts) > 0 else ""
+            qty_str = parts[1] if len(parts) > 1 else "1"
+            unit_str = parts[2] if len(parts) > 2 else ""
+            price_str = parts[3].lower() if len(parts) > 3 else "0$"
+            date_str = parts[4] if len(parts) > 4 else ""
                 
             # ទាញយកតួលេខតម្លៃ
             numbers = re.findall(r"[-+]?(?:\d*\.\d+|\d+)", price_str)
@@ -198,11 +179,11 @@ def generate_invoice(message):
                 <tr>
                     <td>{count}</td>
                     <td class="text-left">{item_name}</td>
+                    <td>{date_str}</td>
                     <td>{qty_str}</td>
                     <td>{unit_str}</td>
                     <td>$ {final_usd:,.2f}</td>
                     <td>$ {row_total:,.2f}</td>
-                    <td></td>
                 </tr>
                 """
                 count += 1
@@ -213,7 +194,6 @@ def generate_invoice(message):
         logo_html = f'<img src="file://{logo_path}" class="logo" alt="Logo">'
     
     current_title = user_titles.get(chat_id, "បញ្ជីទិញឥវ៉ាន់")
-    date_html = f'<p class="invoice-date"><b>កាលបរិច្ឆេទ / Date:</b> {first_date}</p>' if first_date else ''
 
     attachments_html = ""
     if chat_id in user_attachments and user_attachments[chat_id]:
@@ -249,9 +229,8 @@ def generate_invoice(message):
             .header-container {{ text-align: center; margin-bottom: 10px; position: relative; height: 80px; }}
             .logo {{ max-height: 80px; max-width: 200px; object-fit: contain; position: absolute; left: 0; top: 0; }}
             h2 {{ color: #000; margin-top: 15px; font-weight: 700; font-size: 20px; text-decoration: underline; }}
-            .invoice-date {{ text-align: right; font-size: 13px; margin-bottom: 10px; }}
             
-            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
             th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }}
             th {{ background-color: #f0f0f0; font-weight: 700; }}
             .text-left {{ text-align: left; padding-left: 8px; }}
@@ -276,26 +255,23 @@ def generate_invoice(message):
             <h2>{current_title}</h2>
         </div>
         
-        {date_html}
-        
         <table>
             <thead>
                 <tr>
                     <th style="width: 5%;">លរ</th>
-                    <th style="width: 38%;">បរិយាយ</th>
+                    <th style="width: 30%;">បរិយាយ</th>
+                    <th style="width: 15%;">កាលបរិច្ឆេទ</th>
                     <th style="width: 10%;">បរិមាណ</th>
                     <th style="width: 10%;">ឯកតា</th>
-                    <th style="width: 13%;">តម្លៃ ($)</th>
-                    <th style="width: 14%;">តម្លៃសរុប ($)</th>
-                    <th style="width: 10%;">ផ្សេងៗ</th>
+                    <th style="width: 15%;">តម្លៃ ($)</th>
+                    <th style="width: 15%;">តម្លៃសរុប ($)</th>
                 </tr>
             </thead>
             <tbody>
                 {table_rows}
                 <tr class="total-row">
-                    <td colspan="5" class="text-right">សរុបទឹកប្រាក់ (USD)</td>
+                    <td colspan="6" class="text-right">សរុបទឹកប្រាក់ (USD)</td>
                     <td>$ {total_usd:,.2f}</td>
-                    <td></td>
                 </tr>
             </tbody>
         </table>
@@ -321,7 +297,7 @@ def generate_invoice(message):
         bot.send_document(
             message.chat.id, 
             document=('Invoice_A4.pdf', pdf_file),
-            caption="វិក្កយបត្រ A4 របស់អ្នកត្រូវបានបង្កើតដោយជោគជ័យ! 🎉"
+            caption="វិក្កយបត្រ A4 របស់អ្នក (មាន Column កាលបរិច្ឆេទក្នុងតារាង) បានបង្កើតរួចរាល់ហើយ! 🎉"
         )
     except Exception as e:
         bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}")
