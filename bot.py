@@ -5,7 +5,7 @@ import threading
 import os
 import re
 
-API_TOKEN = os.environ.get('BOT_TOKEN', '8878587093:AAFncmD_3pLSir1paGSUgkzPhNhL4oO40Hg') 
+API_TOKEN = os.environ.get('BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE') 
 bot = telebot.TeleBot(API_TOKEN)
 
 user_attachments = {}
@@ -32,7 +32,7 @@ def save_logo(message):
             downloaded_file = bot.download_file(file_info.file_path)
             with open("logo.jpg", 'wb') as new_file:
                 new_file.write(downloaded_file)
-            bot.reply_to(message, "✅ រก្សាទុក Logo ជោគជ័យ!")
+            bot.reply_to(message, "✅ រក្សាទុក Logo ជោគជ័យ!")
         except Exception as e:
             bot.reply_to(message, f"❌ មានបញ្ហា: {e}")
     else:
@@ -76,7 +76,7 @@ def send_welcome(message):
 សួស្តី! បញ្ជាដែលប្រើបាន៖
 /invoice - បង្កើតវិក្កយបត្រ A4 (ប្តូររៀលជាដុល្លារ 1$=4000៛)
 /setlogo - កំណត់ Logo
-/addattachment - បន្ថែមរូបភាព Attachment ច្រើនសន្លឹក
+/addattachment - បន្ថែមរូបភាព Attachment ដាក់ ២ ជួរ
     """
     bot.reply_to(message, text)
 
@@ -141,8 +141,8 @@ def generate_invoice(message):
                 attachments_html += f'<div class="img-cell"><img src="file://{img_path}" class="attachment-img" alt="Attachment"></div>'
         attachments_html += '</div></div>'
 
-    # កំណត់ទីតាំង Font ខ្មែរពីក្នុង Server ផ្ទាល់
-    font_path = os.path.abspath("Battambang.ttf")
+    # ឈ្មោះ Font ត្រូវនឹង GitHub របស់អ្នក (Battambang-Regular.ttf)
+    font_path = os.path.abspath("Battambang-Regular.ttf")
 
     html_content = f"""
     <!DOCTYPE html>
@@ -230,10 +230,10 @@ def generate_invoice(message):
         bot.send_document(
             message.chat.id, 
             document=('Invoice_A4.pdf', pdf_file),
-            caption="នេះគឺជាវិក្កយបត្រ A4 របស់អ្នក (រៀបចំរូប ២ ជួរ និងអក្សរខ្មែរត្រឹមត្រូវ)! 🎉"
+            caption="វិក្កយបត្រ A4 របស់អ្នកត្រូវបានបង្កើតដោយជោគជ័យ (អក្សរខ្មែរច្បាស់ និងរូបភាព ២ ជួរ)! 🎉"
         )
     except Exception as e:
-        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}")
+        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងการបង្កើត PDF: {e}")
 
 if __name__ == "__main__":
     threading.Thread(target=run_web_server).start()
