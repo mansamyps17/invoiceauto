@@ -7,16 +7,22 @@ import os
 import re
 from datetime import datetime
 
-API_TOKEN = os.environ.get('BOT_TOKEN', '8878587093:AAFncmD_3pLSir1paGSUgkzPhNhL4oO40Hg') 
+API_TOKEN = os.environ.get('BOT_TOKEN', '8878587093:AAFncmD_3pLSir1paGSUgkzPhNhL4oO40Hg')
 bot = telebot.TeleBot(API_TOKEN)
+
+# ⚠️ [សំខាន់] សូមជំនួសលេខ 'YOUR_ADMIN_CHAT_ID' ជាមួយ Telegram Chat ID របស់អ្នកផ្ទាល់ (ជាលេខ ID)
+# ឧទាហរណ៍៖ ADMIN_ID = 123456789 (អ្នកអាចឆែករក ID របស់អ្នកតាមរយៈ bot ផ្សេងៗដូចជា @userinfobot)
+ADMIN_ID = 644928138  
 
 user_logos = {}
 user_attachments = {}
 user_titles = {}
 user_pdf_names = {}
-
-# បញ្ជីសម្រាប់រក្សាទុកព័ត៌មានអ្នកប្រើប្រាស់ Bot
 registered_users = {}
+
+# បញ្ជីរក្សាទុក ID អ្នកដែលត្រូវបានអនុញ្ញាតឱ្យប្រើប្រាស់ Bot
+approved_users = set()
+approved_users.add(ADMIN_ID) # Admin ត្រូវតែមានសិទ្ធិស្រាប់
 
 app = Flask(__name__)
 
@@ -47,20 +53,63 @@ def send_welcome(message):
     chat_id = message.chat.id
     user = message.from_user
     
-    # កត់ត្រាទុកព័ត៌មានអ្នកប្រើប្រាស់
-    user_info = {
+    registered_users[chat_id] = {
         "id": chat_id,
         "name": f"{user.first_name or ''} {user.last_name or ''}".strip(),
         "username": f"@{user.username}" if user.username else "អត់មាន Username"
     }
-    registered_users[chat_id] = user_info
+
+    # ពិនិត្យមើលថាតើ User នេះបានទទួលការអនុញ្ញាតហើយឬยัง
+    if chat_id not in approved_users:
+        bot.reply_to(message, "⏳ គណនីរបស់អ្នកមិនទាន់មានសិទ្ធិប្រើប្រាស់ Bot នេះទេ។ សំណើរបស់អ្នកត្រូវបានផ្ញើជូន Admin រួចរាល់ សូមរង់ចាំការអនុញ្ញាត។")
+        
+        # ផ្ញើសារជូនដំណឹងទៅ Admin ព្រមទាំងមានប៊ូតុងចុចអនុញ្ញាត
+        admin_markup = InlineKeyboardMarkup()
+        admin_markup.add(InlineKeyboardButton("✅ អនុញ្ញាតឱ្យប្រើ", callback_data=f"approve_{chat_id}"))
+        
+        bot.send_message(
+            ADMIN_ID, 
+            f"🔔 **មានអ្នកស្នើសុំប្រើប្រាស់ Bot ថ្មី!**\n\n👤 ឈ្មោះ: {registered_users[chat_id]['name']}\nអាយឌី (ID): `{chat_id}`\nUsername: {registered_users[chat_id]['username']}",
+            reply_markup=admin_markup,
+            parse_mode="Markdown"
+        )
+        return
 
     text = "សួស្តី! សូមជ្រើសរើសជម្រើសខាងក្រោមដើម្បីចាប់ផ្តើម៖ 👇"
     bot.reply_to(message, text, reply_markup=get_main_menu_keyboard())
 
-# មុខងារសម្រាប់ពិនិត្យមើលចំនួន និងឈ្មោះអ្នកដែលបាន Start Bot
+# មុខងារសម្រាប់ Admin ចុចអនុញ្ញាតผ่านប៊ូតុង
+@bot.callback_query_handler(func=lambda call: call.data.startswith('approve_'))
+def approve_user_callback(call):
+    if call.from_user.id != ADMIN_ID:
+        bot.answer_callback_query(call.id, "❌ អ្នកគ្មានសិទ្ធិធ្វើការងារនេះទេ!", show_alert=True)
+        return
+        
+    target_chat_id = int(call.data.split('_')[1])
+    approved_users.add(target_chat_id)
+    
+    bot.answer_callback_query(call.id, "✅ បានអនុញ្ញាតជោគជ័យ!")
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text=f"{call.message.text}\n\n🟢 **ស្ថានភាព៖ បានអនុញ្ញាតរួចរាល់**"
+    )
+    
+    # ផ្ញើសារទៅบอก User នោះថាទទួលបានសិទ្ធិហើយ
+    try:
+        bot.send_message(
+            target_chat_id, 
+            "🎉 អបអរសាទរ! សំណើរបស់អ្នកត្រូវបាន Admin អនុញ្ញាតហើយ។ ឥឡូវนี้អ្នកអាចប្រើប្រាស់ Bot បានធម្មតា។ សូមចុច /start ម្ដងទៀត។"
+        )
+    except:
+        pass
+
+# មុខងារសម្រាប់ Admin មើលបញ្ជីអ្នកប្រើប្រាស់
 @bot.message_handler(commands=['users'])
 def show_users(message):
+    if message.chat.id != ADMIN_ID:
+        return
+        
     total_users = len(registered_users)
     if total_users == 0:
         bot.reply_to(message, "⚠️ មិនទាន់មានអ្នកប្រើប្រាស់ណាមួយបាន Start Bot ទេ។")
@@ -68,14 +117,20 @@ def show_users(message):
         
     user_list_text = f"👥 **ចំនួនអ្នកប្រើប្រាស់សរុប៖** {total_users} នាក់\n\n**បញ្ជីឈ្មោះ៖**\n"
     for idx, (uid, info) in enumerate(registered_users.items(), 1):
-        user_list_text += f"{idx}. {info['name']} ({info['username']}) - ID: `{uid}`\n"
+        status = "🟢 ឱ្យប្រើ" if uid in approved_users else "⏳ រង់ចាំ"
+        user_list_text += f"{idx}. {info['name']} ({info['username']}) - ID: `{uid}` [{status}]\n"
         
     bot.reply_to(message, user_list_text, parse_mode="Markdown")
 
-@bot.callback_query_handler(func=lambda call: True)
+# មុខងារគ្រប់គ្រងប្រព័ន្ធប៊ូតុងផ្សេងៗ (ត្រូវពិនិត្យសិទ្ធិមុនអនុញ្ញាត)
+@bot.callback_query_handler(func=lambda call: not call.data.startswith('approve_'))
 def callback_query(call):
     chat_id = call.message.chat.id
     
+    if chat_id not in approved_users:
+        bot.answer_callback_query(call.id, "❌ អ្នកមិនមានសិទ្ធិប្រើប្រាស់ Bot នេះទេ!", show_alert=True)
+        return
+        
     if call.data == 'btn_invoice':
         bot.answer_callback_query(call.id)
         date_markup = InlineKeyboardMarkup()
@@ -97,7 +152,7 @@ def callback_query(call):
         date_text = f" (កាលបរិច្ឆេទ៖ {selected_date})" if selected_date else " (អត់មានដាក់ថ្ងៃទី)"
         msg = bot.send_message(
             chat_id,
-            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់。\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏បាន)៖\n\n📌 ឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\n📌 ឧទាហរណ៍ ២៖ តុ - 20000៛"
+            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់។\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏បាន)៖\n\n📌 ឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\n📌 ឧទាហរណ៍ ២៖ តុ - 20000៛"
         )
         bot.register_next_step_handler(msg, generate_invoice)
         
@@ -139,8 +194,10 @@ def callback_query(call):
             user_attachments[chat_id] = []
         bot.send_message(chat_id, "🗑 បានលុបរូប Attachment ទាំងអស់រួចរាល់!", reply_markup=get_main_menu_keyboard())
 
+# មុខងារបញ្ជាផ្សេងៗ (ត្រូវពិនិត្យសិទ្ធិការពារផងដែរ)
 @bot.message_handler(commands=['setfilename'])
 def ask_pdf_filename(message):
+    if message.chat.id not in approved_users: return
     msg = bot.reply_to(message, "📁 សូមវាយបញ្ចូលឈ្មោះ File PDF ដែលអ្នកចង់បាន៖")
     bot.register_next_step_handler(msg, save_pdf_filename)
 
@@ -155,6 +212,7 @@ def save_pdf_filename(message):
 
 @bot.message_handler(commands=['settitle'])
 def ask_title(message):
+    if message.chat.id not in approved_users: return
     msg = bot.reply_to(message, "✏️ សូមវាយបញ្ចូលចំណងជើងថ្មីសម្រាប់វិក្កយបត្ររបស់អ្នក៖")
     bot.register_next_step_handler(msg, save_title)
 
@@ -168,6 +226,7 @@ def save_title(message):
 
 @bot.message_handler(commands=['setlogo'])
 def ask_logo(message):
+    if message.chat.id not in approved_users: return
     msg = bot.reply_to(message, "🖼 សូមផ្ញើរូបភាព Logo របស់អ្នក៖")
     bot.register_next_step_handler(msg, save_logo)
 
@@ -191,11 +250,14 @@ def save_logo(message):
 
 @bot.message_handler(commands=['addattachment'])
 def ask_attachment(message):
+    if message.chat.id not in approved_users: return
     bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាបាន)។ ផ្ញើរួចសូមវាយពាក្យ `/done`!")
 
 @bot.message_handler(content_types=['photo'])
 def handle_photos(message):
     chat_id = message.chat.id
+    if chat_id not in approved_users: return
+    
     if chat_id not in user_attachments:
         user_attachments[chat_id] = []
         
@@ -214,6 +276,8 @@ def handle_photos(message):
 @bot.message_handler(commands=['done'])
 def finish_attachment(message):
     chat_id = message.chat.id
+    if chat_id not in approved_users: return
+    
     count = len(user_attachments.get(chat_id, []))
     if count > 0:
         bot.reply_to(message, f"✅ រក្សាទុក Attachment សរុបចំនួន {count} សន្លឹកជោគជ័យ!", reply_markup=get_main_menu_keyboard())
@@ -223,6 +287,10 @@ def finish_attachment(message):
 @bot.message_handler(commands=['invoice'])
 def ask_for_items_command(message):
     chat_id = message.chat.id
+    if chat_id not in approved_users:
+        bot.reply_to(message, "❌ អ្នកមិនមានសិទ្ធិប្រើប្រាស់ Bot នេះទេ!")
+        return
+        
     date_markup = InlineKeyboardMarkup()
     today_str = datetime.now().strftime("%d-%m-%Y")
     date_markup.add(
@@ -232,9 +300,11 @@ def ask_for_items_command(message):
     bot.send_message(chat_id, "តើអ្នកចង់ប្រើប្រាស់កាលបរិច្ឆេទថ្ងៃណាសម្រាប់វិក្កយបត្រនេះ?", reply_markup=date_markup)
 
 def generate_invoice(message):
+    chat_id = message.chat.id
+    if chat_id not in approved_users: return
+    
     bot.reply_to(message, "កំពុងរៀបចំវិក្កយបត្រ A4 របស់អ្នក... ⏳")
     
-    chat_id = message.chat.id
     user_input = message.text
     lines = user_input.split('\n')
     
