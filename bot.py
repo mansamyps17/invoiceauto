@@ -15,6 +15,9 @@ user_attachments = {}
 user_titles = {}
 user_pdf_names = {}
 
+# បញ្ជីសម្រាប់រក្សាទុកព័ត៌មានអ្នកប្រើប្រាស់ Bot
+registered_users = {}
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -41,8 +44,33 @@ def get_main_menu_keyboard():
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
+    chat_id = message.chat.id
+    user = message.from_user
+    
+    # កត់ត្រាទុកព័ត៌មានអ្នកប្រើប្រាស់
+    user_info = {
+        "id": chat_id,
+        "name": f"{user.first_name or ''} {user.last_name or ''}".strip(),
+        "username": f"@{user.username}" if user.username else "អត់មាន Username"
+    }
+    registered_users[chat_id] = user_info
+
     text = "សួស្តី! សូមជ្រើសរើសជម្រើសខាងក្រោមដើម្បីចាប់ផ្តើម៖ 👇"
     bot.reply_to(message, text, reply_markup=get_main_menu_keyboard())
+
+# មុខងារសម្រាប់ពិនិត្យមើលចំនួន និងឈ្មោះអ្នកដែលបាន Start Bot
+@bot.message_handler(commands=['users'])
+def show_users(message):
+    total_users = len(registered_users)
+    if total_users == 0:
+        bot.reply_to(message, "⚠️ មិនទាន់មានអ្នកប្រើប្រាស់ណាមួយបាន Start Bot ទេ។")
+        return
+        
+    user_list_text = f"👥 **ចំនួនអ្នកប្រើប្រាស់សរុប៖** {total_users} នាក់\n\n**បញ្ជីឈ្មោះ៖**\n"
+    for idx, (uid, info) in enumerate(registered_users.items(), 1):
+        user_list_text += f"{idx}. {info['name']} ({info['username']}) - ID: `{uid}`\n"
+        
+    bot.reply_to(message, user_list_text, parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
@@ -69,7 +97,7 @@ def callback_query(call):
         date_text = f" (កាលបរិច្ឆេទ៖ {selected_date})" if selected_date else " (អត់មានដាក់ថ្ងៃទី)"
         msg = bot.send_message(
             chat_id,
-            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់។\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏បាន)៖\n\n📌 ឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\n📌 ឧទាហរណ៍ ២៖ តុ - 20000៛"
+            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់。\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏បាន)៖\n\n📌 ឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\n📌 ឧទាហរណ៍ ២៖ តុ - 20000៛"
         )
         bot.register_next_step_handler(msg, generate_invoice)
         
@@ -113,7 +141,7 @@ def callback_query(call):
 
 @bot.message_handler(commands=['setfilename'])
 def ask_pdf_filename(message):
-    msg = bot.reply_to(message, "📁 សូមវាយបញ្ចូលឈ្មោះ File PDF ដែលអ្នកចង់ได้៖")
+    msg = bot.reply_to(message, "📁 សូមវាយបញ្ចូលឈ្មោះ File PDF ដែលអ្នកចង់បាន៖")
     bot.register_next_step_handler(msg, save_pdf_filename)
 
 def save_pdf_filename(message):
