@@ -100,11 +100,10 @@ def callback_query(call):
         
     elif call.data == 'btn_addattachment':
         bot.answer_callback_query(call.id)
-        msg = bot.send_message(
+        bot.send_message(
             chat_id, 
-            "📎 **របៀបបន្ថែម Attachment:**\nអ្នកអាចផ្ញើរូបភាពចូលមក **ច្រើនសន្លឹកព្រមគ្នា** បានយ៉ាងងាយស្រួល។ ពេលផ្ញើរួចរាល់ សូមវាយពាក្យ `/done` ដើម្បីបញ្ជាក់។"
+            "📎 **របៀបបន្ថែម Attachment:**\nអ្នកអាចផ្ញើរូបភាពចូលមកក្នុងแชតនេះ **ច្រើនសន្លឹកព្រមគ្នា** បានតាមចិត្ត។ ពេលផ្ញើរួចរាល់ សូមវាយពាក្យ `/done` ដើម្បីបញ្ជាក់។"
         )
-        bot.register_next_step_handler(msg, collect_attachments)
         
     elif call.data == 'btn_clearattachment':
         bot.answer_callback_query(call.id)
@@ -162,44 +161,35 @@ def save_logo(message):
     else:
         bot.reply_to(message, "❌ សូមផ្ញើជារូបភាពប៉ុណ្ណោះ។")
 
-# មុខងារទទួលរូបភាព Attachment ទាំងអស់គ្នាព្រមរហូតដល់វាយ /done
 @bot.message_handler(commands=['addattachment'])
 def ask_attachment(message):
-    msg = bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អ្នកអាចផ្ញើច្រើនសន្លឹកព្រមគ្នាបាន)។ ផ្ញើរួចសូមវាយពាក្យ /done៖")
-    bot.register_next_step_handler(msg, collect_attachments)
+    bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាបាន)។ ផ្ញើរួចសូមវាយពាក្យ /done៖")
 
-def collect_attachments(message):
+# មុខងារស្វ័យប្រវត្តិសម្រាប់ចាប់យករូបភាព Attachment ទាំងអស់ដែលផ្ញើចូលមក
+@bot.message_handler(content_types=['photo'])
+def handle_photos(message):
     chat_id = message.chat.id
-    
-    # ប្រសិនបើអ្នកប្រើវាយ /done គឺបញ្ចប់ការបញ្ជូនរូបភាព
-    if message.text and message.text.lower() == '/done':
-        count = len(user_attachments.get(chat_id, []))
-        bot.reply_to(message, f"✅ រក្សាទុក Attachment សរុបចំនួន {count} សន្លឹកជោគជ័យ!", reply_markup=get_main_menu_keyboard())
-        return
+    if chat_id not in user_attachments:
+        user_attachments[chat_id] = []
+        
+    try:
+        file_info = bot.get_file(message.photo[-1].file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+        
+        img_name = f"attachment_{chat_id}_{len(user_attachments[chat_id])}.jpg"
+        with open(img_name, 'wb') as new_file:
+            new_file.write(downloaded_file)
+            
+        user_attachments[chat_id].append(img_name)
+    except Exception as e:
+        print(f"Error saving photo: {e}")
 
-    # ប្រសិនបើមានការផ្ញើរូបភាពចូលមក (អាចជាអាល់ប៊ុមច្រើនសន្លឹកព្រមគ្នា)
-    if message.photo:
-        if chat_id not in user_attachments:
-            user_attachments[chat_id] = []
-        try:
-            file_info = bot.get_file(message.photo[-1].file_id)
-            downloaded_file = bot.download_file(file_info.file_path)
-            
-            img_name = f"attachment_{chat_id}_{len(user_attachments[chat_id])}.jpg"
-            with open(img_name, 'wb') as new_file:
-                new_file.write(downloaded_file)
-                
-            user_attachments[chat_id].append(img_name)
-            
-            # រង់ចាំទទួលសារបន្តទៀតរហូតដល់ /done
-            msg = bot.reply_to(message, f"📥 បានទទួលទុករូបភាព (សរុប: {len(user_attachments[chat_id])} សន្លឹក)។ អាចផ្ញើបន្ថែមទៀត ឬវាយពាក្យ /done ដើម្បីបញ្ចប់។")
-            bot.register_next_step_handler(msg, collect_attachments)
-        except Exception as e:
-            bot.reply_to(message, f"❌ មានបញ្ហា: {e}")
-    else:
-        # បើវាយខុសអត្ថបទ ឱ្យបន្តរង់ចាំដដែល
-        msg = bot.reply_to(message, "សូមផ្ញើរូបភាពបន្ថែម ឬវាយពាក្យ /done ដើម្បីបញ្ចប់។")
-        bot.register_next_step_handler(msg, collect_attachments)
+# មុខងារបញ្ចប់ការផ្ញើរូបភាពតាមរយៈពាក្យ /done
+@bot.message_handler(commands=['done'])
+def finish_attachment(message):
+    chat_id = message.chat.id
+    count = len(user_attachments.get(chat_id, []))
+    bot.reply_to(message, f"✅ រក្សាទុក Attachment សរុបចំនួន {count} សន្លឹកជោគជ័យ!", reply_markup=get_main_menu_keyboard())
 
 @bot.message_handler(commands=['invoice'])
 def ask_for_items_command(message):
