@@ -29,19 +29,19 @@ def get_main_menu_keyboard():
     markup = InlineKeyboardMarkup()
     markup.row_width = 2
     markup.add(
-        InlineKeyboardButton("បង្កើតវិក្កយបត្រ", callback_data='btn_invoice'),
-        InlineKeyboardButton("កំណត់ឈ្មោះ File PDF", callback_data='btn_setfilename'),
-        InlineKeyboardButton("ដូរចំណងជើងវិក្កយបត្រ", callback_data='btn_settitle'),
-        InlineKeyboardButton("កំណត់ Logo", callback_data='btn_setlogo'),
-        InlineKeyboardButton("លុប Logo", callback_data='btn_clearlogo'),
-        InlineKeyboardButton("បន្ថែម Attachment", callback_data='btn_addattachment'),
-        InlineKeyboardButton("លុប Attachment", callback_data='btn_clearattachment')
+        InlineKeyboardButton("📄 បង្កើតវិក្កយបត្រ", callback_data='btn_invoice'),
+        InlineKeyboardButton("📁 កំណត់ឈ្មោះ File PDF", callback_data='btn_setfilename'),
+        InlineKeyboardButton("✏️ ដូរចំណងជើងវិក្កយបត្រ", callback_data='btn_settitle'),
+        InlineKeyboardButton("🖼 កំណត់ Logo", callback_data='btn_setlogo'),
+        InlineKeyboardButton("🗑 លុប Logo", callback_data='btn_clearlogo'),
+        InlineKeyboardButton("📎 បន្ថែម Attachment", callback_data='btn_addattachment'),
+        InlineKeyboardButton("🗑 លុប Attachment", callback_data='btn_clearattachment')
     )
     return markup
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    text = "សួស្តី! សូមជ្រើសរើសជម្រើសខាងក្រោមដើម្បីចាប់ផ្តើម៖"
+    text = "សួស្តី! សូមជ្រើសរើសជម្រើសខាងក្រោមដើម្បីចាប់ផ្តើម៖ 👇"
     bot.reply_to(message, text, reply_markup=get_main_menu_keyboard())
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -53,8 +53,8 @@ def callback_query(call):
         date_markup = InlineKeyboardMarkup()
         today_str = datetime.now().strftime("%d-%m-%Y")
         date_markup.add(
-            InlineKeyboardButton(f"យកថ្ងៃនេះ ({today_str})", callback_data=f"date_today_{today_str}"),
-            InlineKeyboardButton("រំលង (មិនដាក់ថ្ងៃទី)", callback_data="date_none")
+            InlineKeyboardButton(f"📅 យកថ្ងៃនេះ ({today_str})", callback_data=f"date_today_{today_str}"),
+            InlineKeyboardButton("❌ រំលង (មិនដាក់ថ្ងៃទី)", callback_data="date_none")
         )
         bot.send_message(chat_id, "តើអ្នកចង់ប្រើប្រាស់កាលបរិច្ឆេទថ្ងៃណាសម្រាប់វិក្កយបត្រនេះ?", reply_markup=date_markup)
         
@@ -69,23 +69,23 @@ def callback_query(call):
         date_text = f" (កាលបរិច្ឆេទ៖ {selected_date})" if selected_date else " (អត់មានដាក់ថ្ងៃទី)"
         msg = bot.send_message(
             chat_id,
-            f"បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់។\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏បាន)៖\n\nឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\nឧទាហរណ៍ ២៖ តុ - 20000៛"
+            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់។\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏បាន)៖\n\n📌 ឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\n📌 ឧទាហរណ៍ ២៖ តុ - 20000៛"
         )
         bot.register_next_step_handler(msg, generate_invoice)
         
     elif call.data == 'btn_setfilename':
         bot.answer_callback_query(call.id)
-        msg = bot.reply_to(call.message, "សូមវាយបញ្ចូលឈ្មោះ File PDF ដែលអ្នកចង់បាន៖")
+        msg = bot.reply_to(call.message, "📁 សូមវាយបញ្ចូលឈ្មោះ File PDF ដែលអ្នកចង់បាន (ឧទាហរណ៍៖ Invoice_001)៖")
         bot.register_next_step_handler(msg, save_pdf_filename)
         
     elif call.data == 'btn_settitle':
         bot.answer_callback_query(call.id)
-        msg = bot.reply_to(call.message, "សូមវាយបញ្ចូលចំណងជើងថ្មីសម្រាប់វិក្កយបត្ររបស់អ្នក៖")
+        msg = bot.reply_to(call.message, "✏️ សូមវាយបញ្ចូលចំណងជើងថ្មីសម្រាប់វិក្កយបត្ររបស់អ្នក៖")
         bot.register_next_step_handler(msg, save_title)
         
     elif call.data == 'btn_setlogo':
         bot.answer_callback_query(call.id)
-        msg = bot.reply_to(call.message, "សូមផ្ញើរូបភាព Logo ផ្ទាល់ខ្លួនរបស់អ្នក៖")
+        msg = bot.reply_to(call.message, "🖼 សូមផ្ញើរូបភាព Logo ផ្ទាល់ខ្លួនរបស់អ្នក៖")
         bot.register_next_step_handler(msg, save_logo)
         
     elif call.data == 'btn_clearlogo':
@@ -96,24 +96,24 @@ def callback_query(call):
             except:
                 pass
             del user_logos[chat_id]
-        bot.send_message(chat_id, "បានលុប Logo ចោលរួចរាល់!", reply_markup=get_main_menu_keyboard())
+        bot.send_message(chat_id, "🗑 បានលុប Logo ចោលរួចរាល់!", reply_markup=get_main_menu_keyboard())
         
     elif call.data == 'btn_addattachment':
         bot.answer_callback_query(call.id)
         bot.send_message(
             chat_id, 
-            "សូមផ្ញើរូបភាព Attachment ចូលមកក្នុងឆាតនេះ (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាបានតាមចិត្ត)។ ពេលផ្ញើរួចរាល់ សូមវាយពាក្យ /done ដើម្បីបញ្ជាក់។"
+            "📎 **របៀបបន្ថែម Attachment:**\nសូមផ្ញើរូបភាពចូលមកក្នុងឆាតនេះ (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាបានតាមចិត្ត)។ ពេលផ្ញើរួចរាល់ សូមវាយពាក្យ `/done` ដើម្បីបញ្ជាក់។"
         )
         
     elif call.data == 'btn_clearattachment':
         bot.answer_callback_query(call.id)
         if chat_id in user_attachments:
             user_attachments[chat_id] = []
-        bot.send_message(chat_id, "បានលុបរូប Attachment ទាំងអស់រួចរាល់!", reply_markup=get_main_menu_keyboard())
+        bot.send_message(chat_id, "🗑 បានលុបរូប Attachment ទាំងអស់រួចរាល់!", reply_markup=get_main_menu_keyboard())
 
 @bot.message_handler(commands=['setfilename'])
 def ask_pdf_filename(message):
-    msg = bot.reply_to(message, "សូមវាយបញ្ចូលឈ្មោះ File PDF ដែលអ្នកចង់បាន៖")
+    msg = bot.reply_to(message, "📁 សូមវាយបញ្ចូលឈ្មោះ File PDF ដែលអ្នកចង់ได้៖")
     bot.register_next_step_handler(msg, save_pdf_filename)
 
 def save_pdf_filename(message):
@@ -121,26 +121,26 @@ def save_pdf_filename(message):
     if message.text:
         clean_name = re.sub(r'[\\/*?:"<>|]', "", message.text.strip())
         user_pdf_names[chat_id] = clean_name
-        bot.reply_to(message, f"បានកំណត់ឈ្មោះ File PDF ជា៖ **{clean_name}.pdf** ជោគជ័យ!", reply_markup=get_main_menu_keyboard())
+        bot.reply_to(message, f"✅ បានកំណត់ឈ្មោះ File PDF ជា៖ **{clean_name}.pdf** ជោគជ័យ!", reply_markup=get_main_menu_keyboard())
     else:
-        bot.reply_to(message, "សូមបញ្ចូលអត្ថបទជាអក្សរ។")
+        bot.reply_to(message, "❌ សូមបញ្ចូលអត្ថបទជាអក្សរ។")
 
 @bot.message_handler(commands=['settitle'])
 def ask_title(message):
-    msg = bot.reply_to(message, "សូមវាយបញ្ចូលចំណងជើងថ្មីសម្រាប់វិក្កយបត្ររបស់អ្នក៖")
+    msg = bot.reply_to(message, "✏️ សូមវាយបញ្ចូលចំណងជើងថ្មីសម្រាប់វិក្កយបត្ររបស់អ្នក៖")
     bot.register_next_step_handler(msg, save_title)
 
 def save_title(message):
     chat_id = message.chat.id
     if message.text:
         user_titles[chat_id] = message.text.strip()
-        bot.reply_to(message, f"បានផ្លាស់ប្តូរចំណងជើងទៅជា៖ {user_titles[chat_id]}", reply_markup=get_main_menu_keyboard())
+        bot.reply_to(message, f"✅ បានផ្លាស់ប្តូរចំណងជើងទៅជា៖ **{user_titles[chat_id]}**", reply_markup=get_main_menu_keyboard())
     else:
-        bot.reply_to(message, "សូមបញ្ចូលអត្ថបទជាអក្សរ។")
+        bot.reply_to(message, "❌ សូមបញ្ចូលអត្ថបទជាអក្សរ។")
 
 @bot.message_handler(commands=['setlogo'])
 def ask_logo(message):
-    msg = bot.reply_to(message, "សូមផ្ញើរូបភាព Logo របស់អ្នក៖")
+    msg = bot.reply_to(message, "🖼 សូមផ្ញើរូបភាព Logo របស់អ្នក៖")
     bot.register_next_step_handler(msg, save_logo)
 
 def save_logo(message):
@@ -155,15 +155,15 @@ def save_logo(message):
                 new_file.write(downloaded_file)
                 
             user_logos[chat_id] = logo_name
-            bot.reply_to(message, "រក្សាទុក Logo ជោគជ័យ!", reply_markup=get_main_menu_keyboard())
+            bot.reply_to(message, "✅ រក្សាទុក Logo ជោគជ័យ!", reply_markup=get_main_menu_keyboard())
         except Exception as e:
-            bot.reply_to(message, f"មានបញ្ហា: {e}")
+            bot.reply_to(message, f"❌ មានបញ្ហា: {e}")
     else:
-        bot.reply_to(message, "សូមផ្ញើជារូបភាពប៉ុណ្ណោះ។")
+        bot.reply_to(message, "❌ សូមផ្ញើជារូបភាពប៉ុណ្ណោះ។")
 
 @bot.message_handler(commands=['addattachment'])
 def ask_attachment(message):
-    bot.reply_to(message, "សូមផ្ញើរូបភាព Attachment ចូលមក (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាបាន)។ ផ្ញើរួចសូមវាយពាក្យ /done៖")
+    bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាបាន)។ ផ្ញើរួចសូមវាយពាក្យ `/done`!")
 
 @bot.message_handler(content_types=['photo'])
 def handle_photos(message):
@@ -188,9 +188,9 @@ def finish_attachment(message):
     chat_id = message.chat.id
     count = len(user_attachments.get(chat_id, []))
     if count > 0:
-        bot.reply_to(message, f"រក្សាទុក Attachment សរុបចំនួន {count} សន្លឹកជោគជ័យ!", reply_markup=get_main_menu_keyboard())
+        bot.reply_to(message, f"✅ រក្សាទុក Attachment សរុបចំនួន {count} សន្លឹកជោគជ័យ!", reply_markup=get_main_menu_keyboard())
     else:
-        bot.reply_to(message, "មិនទាន់មានរូបភាព Attachment ណាមួយត្រូវបានផ្ញើមកទេ។", reply_markup=get_main_menu_keyboard())
+        bot.reply_to(message, "⚠️ មិនទាន់មានរូបភាព Attachment ណាមួយត្រូវបានផ្ញើមកទេ។", reply_markup=get_main_menu_keyboard())
 
 @bot.message_handler(commands=['invoice'])
 def ask_for_items_command(message):
@@ -198,8 +198,8 @@ def ask_for_items_command(message):
     date_markup = InlineKeyboardMarkup()
     today_str = datetime.now().strftime("%d-%m-%Y")
     date_markup.add(
-        InlineKeyboardButton(f"យកថ្ងៃនេះ ({today_str})", callback_data=f"date_today_{today_str}"),
-        InlineKeyboardButton("រំលង (មិនដាក់ថ្ងៃទី)", callback_data="date_none")
+        InlineKeyboardButton(f"📅 យកថ្ងៃនេះ ({today_str})", callback_data=f"date_today_{today_str}"),
+        InlineKeyboardButton("❌ រំលង (មិនដាក់ថ្ងៃទី)", callback_data="date_none")
     )
     bot.send_message(chat_id, "តើអ្នកចង់ប្រើប្រាស់កាលបរិច្ឆេទថ្ងៃណាសម្រាប់វិក្កយបត្រនេះ?", reply_markup=date_markup)
 
