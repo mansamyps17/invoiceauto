@@ -13,6 +13,7 @@ bot = telebot.TeleBot(API_TOKEN)
 user_logos = {}
 user_attachments = {}
 user_titles = {}
+user_customer_names = {} # រក្សាទុកឈ្មោះអតិថិជន/ឈ្មោះផ្សេងៗសម្រាប់ User ម្នាក់ៗ
 
 app = Flask(__name__)
 
@@ -24,13 +25,14 @@ def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# ប៊ូតុងមេ (Main Menu)
+# ប៊ូតុងមេ (Main Menu) រួមទាំងប៊ូតុងដាក់ឈ្មោះ
 def get_main_menu_keyboard():
     markup = InlineKeyboardMarkup()
     markup.row_width = 2
     markup.add(
         InlineKeyboardButton("📄 បង្កើតវិក្កយបត្រ", callback_data='btn_invoice'),
-        InlineKeyboardButton("✏️ ដូរចំណងជើង", callback_data='btn_settitle'),
+        InlineKeyboardButton("👤 ដាក់ឈ្មោះអតិថិជន", callback_data='btn_setname'),
+        InlineKeyboardButton("✏️ ដូរចំណងជើងវិក្កយបត្រ", callback_data='btn_settitle'),
         InlineKeyboardButton("🖼 កំណត់ Logo", callback_data='btn_setlogo'),
         InlineKeyboardButton("🗑 លុប Logo", callback_data='btn_clearlogo'),
         InlineKeyboardButton("📎 បន្ថែម Attachment", callback_data='btn_addattachment'),
@@ -50,26 +52,18 @@ def callback_query(call):
     
     if call.data == 'btn_invoice':
         bot.answer_callback_query(call.id)
-        
-        # បង្កើតប៊ូតុងសម្រាប់ជ្រើសរើសកាលបរិច្ឆេទ (ថ្ងៃនេះ ឬ មិនដាក់)
         date_markup = InlineKeyboardMarkup()
         today_str = datetime.now().strftime("%d-%m-%Y")
         date_markup.add(
             InlineKeyboardButton(f"📅 យកថ្ងៃនេះ ({today_str})", callback_data=f"date_today_{today_str}"),
             InlineKeyboardButton("❌ រំលង (មិនដាក់ថ្ងៃទី)", callback_data="date_none")
         )
-        
-        bot.send_message(
-            chat_id, 
-            "តើអ្នកចង់ប្រើប្រាស់កាលបរិច្ឆេទថ្ងៃណាសម្រាប់វិក្កយបត្រនេះ?", 
-            reply_markup=date_markup
-        )
+        bot.send_message(chat_id, "តើអ្នកចង់ប្រើប្រាស់កាលបរិច្ឆេទថ្ងៃណាសម្រាប់វិក្កយបត្រនេះ?", reply_markup=date_markup)
         
     elif call.data.startswith('date_today_') or call.data == 'date_none':
         bot.answer_callback_query(call.id)
         selected_date = call.data.split('_')[-1] if call.data.startswith('date_today_') else ""
         
-        # រក្សាទុកកាលបរិច្ឆេទชั่วคราวក្នុង Dictionary តាម chat_id
         if not hasattr(bot, 'temp_dates'):
             bot.temp_dates = {}
         bot.temp_dates[chat_id] = selected_date
@@ -80,6 +74,11 @@ def callback_query(call):
             f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់។\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមកតាមទម្រង់នេះ៖\n(ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ)\n\nឧទាហរណ៍៖\nកៅអី - 2 - ដុំ - 15$\nតុ - 1 - bộ - 20000៛"
         )
         bot.register_next_step_handler(msg, generate_invoice)
+        
+    elif call.data == 'btn_setname':
+        bot.answer_callback_query(call.id)
+        msg = bot.reply_to(call.message, "👤 សូមវាយបញ្ចូលឈ្មោះអតិថិជន ឬឈ្មោះដែលអ្នកចង់ដាក់បង្ហាញលើវិក្កយបត្រ៖")
+        bot.register_next_step_handler(msg, save_customer_name)
         
     elif call.data == 'btn_settitle':
         bot.answer_callback_query(call.id)
@@ -112,7 +111,20 @@ def callback_query(call):
             user_attachments[chat_id] = []
         bot.send_message(chat_id, "🗑 បានលុបរូប Attachment ទាំងអស់រួចរាល់!", reply_markup=get_main_menu_keyboard())
 
-# មុខងារបញ្ជាតាម Command ធម្មតា
+# មុខងាររក្សាទុកឈ្មោះអតិថិជន
+@bot.message_handler(commands=['setname'])
+def ask_customer_name(message):
+    msg = bot.reply_to(message, "👤 សូមវាយបញ្ចូលឈ្មោះអតិថិជន ឬឈ្មោះដែលអ្នកចង់ដាក់បង្ហាញលើវិក្កយបត្រ៖")
+    bot.register_next_step_handler(msg, save_customer_name)
+
+def save_customer_name(message):
+    chat_id = message.chat.id
+    if message.text:
+        user_customer_names[chat_id] = message.text.strip()
+        bot.reply_to(message, f"✅ បានកំណត់ឈ្មោះ៖ **{user_customer_names[chat_id]}** ជោគជ័យ!", reply_markup=get_main_menu_keyboard())
+    else:
+        bot.reply_to(message, "❌ សូមបញ្ចូលអត្ថបទជាអក្សរ។")
+
 @bot.message_handler(commands=['settitle'])
 def ask_title(message):
     msg = bot.reply_to(message, "✏️ សូមវាយបញ្ចូលចំណងជើងថ្មីសម្រាប់វិក្កយបត្ររបស់អ្នក៖")
@@ -203,7 +215,6 @@ def generate_invoice(message):
     total_usd = 0.0
     count = 1
     
-    # ទាញយកកាលបរិច្ឆេទដែលបានជ្រើសរើសពីប៊ូតុងមុននេះ
     invoice_date = ""
     if hasattr(bot, 'temp_dates') and chat_id in bot.temp_dates:
         invoice_date = bot.temp_dates[chat_id]
@@ -260,7 +271,11 @@ def generate_invoice(message):
         logo_html = f'<img src="file://{logo_path}" class="logo" alt="Logo">'
     
     current_title = user_titles.get(chat_id, "បញ្ជីទិញឥវ៉ាន់")
-    date_html = f'<p class="invoice-date"><b>កាលបរិច្ឆេទ / Date:</b> {invoice_date}</p>' if invoice_date else ''
+    customer_name = user_customer_names.get(chat_id, "")
+    
+    # បង្ហាញកាលបរិច្ឆេទ និងឈ្មោះអតិថិជននៅផ្នែកខាងលើ
+    date_html = f'<p class="invoice-info"><b>កាលបរិច្ឆេទ / Date:</b> {invoice_date}</p>' if invoice_date else ''
+    customer_html = f'<p class="invoice-info"><b>អតិថិជន / Customer:</b> {customer_name}</p>' if customer_name else ''
 
     attachments_html = ""
     if chat_id in user_attachments and user_attachments[chat_id]:
@@ -296,7 +311,9 @@ def generate_invoice(message):
             .header-container {{ text-align: center; margin-bottom: 5px; position: relative; height: 80px; }}
             .logo {{ max-height: 80px; max-width: 200px; object-fit: contain; position: absolute; left: 0; top: 0; }}
             h2 {{ color: #000; margin-top: 15px; font-weight: 700; font-size: 20px; text-decoration: underline; }}
-            .invoice-date {{ text-align: right; font-size: 13px; margin-bottom: 10px; font-weight: bold; }}
+            
+            .info-container {{ width: 100%; margin-bottom: 10px; }}
+            .invoice-info {{ font-size: 13px; margin: 3px 0; font-weight: bold; }}
             
             table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
             th, td {{ border: 1px solid #000; padding: 6px; text-align: center; }}
@@ -323,7 +340,10 @@ def generate_invoice(message):
             <h2>{current_title}</h2>
         </div>
         
-        {date_html}
+        <div class="info-container">
+            {customer_html}
+            {date_html}
+        </div>
         
         <table>
             <thead>
@@ -368,7 +388,7 @@ def generate_invoice(message):
         bot.send_document(
             message.chat.id, 
             document=('Invoice_A4.pdf', pdf_file),
-            caption="វិក្កយបត្រ A4 របស់អ្នកបានបង្កើតរួចរាល់ហើយ! 🎉",
+            caption="វិក្កយបត្រ A4 របស់អ្នក (មានបង្ហាញឈ្មោះអតិថិជន និងថ្ងៃខែ) បានបង្កើតរួចរាល់ហើយ! 🎉",
             reply_markup=get_main_menu_keyboard()
         )
     except Exception as e:
