@@ -10,8 +10,6 @@ from datetime import datetime
 API_TOKEN = os.environ.get('BOT_TOKEN', '8878587093:AAFncmD_3pLSir1paGSUgkzPhNhL4oO40Hg')
 bot = telebot.TeleBot(API_TOKEN)
 
-# ⚠️ [សំខាន់] សូមជំនួសលេខ 'YOUR_ADMIN_CHAT_ID' ជាមួយ Telegram Chat ID របស់អ្នកផ្ទាល់ (ជាលេខ ID)
-# ឧទាហរណ៍៖ ADMIN_ID = 123456789 (អ្នកអាចឆែករក ID របស់អ្នកតាមរយៈ bot ផ្សេងៗដូចជា @userinfobot)
 ADMIN_ID = 644928138  
 
 user_logos = {}
@@ -20,9 +18,8 @@ user_titles = {}
 user_pdf_names = {}
 registered_users = {}
 
-# បញ្ជីរក្សាទុក ID អ្នកដែលត្រូវបានអនុញ្ញាតឱ្យប្រើប្រាស់ Bot
 approved_users = set()
-approved_users.add(ADMIN_ID) # Admin ត្រូវតែមានសិទ្ធិស្រាប់
+approved_users.add(ADMIN_ID)
 
 app = Flask(__name__)
 
@@ -59,11 +56,9 @@ def send_welcome(message):
         "username": f"@{user.username}" if user.username else "អត់មាន Username"
     }
 
-    # ពិនិត្យមើលថាតើ User នេះបានទទួលការអនុញ្ញាតហើយឬยัง
     if chat_id not in approved_users:
         bot.reply_to(message, "⏳ គណនីរបស់អ្នកមិនទាន់មានសិទ្ធិប្រើប្រាស់ Bot នេះទេ។ សំណើរបស់អ្នកត្រូវបានផ្ញើជូន Admin រួចរាល់ សូមរង់ចាំការអនុញ្ញាត។")
         
-        # ផ្ញើសារជូនដំណឹងទៅ Admin ព្រមទាំងមានប៊ូតុងចុចអនុញ្ញាត
         admin_markup = InlineKeyboardMarkup()
         admin_markup.add(InlineKeyboardButton("✅ អនុញ្ញាតឱ្យប្រើ", callback_data=f"approve_{chat_id}"))
         
@@ -78,7 +73,6 @@ def send_welcome(message):
     text = "សួស្តី! សូមជ្រើសរើសជម្រើសខាងក្រោមដើម្បីចាប់ផ្តើម៖ 👇"
     bot.reply_to(message, text, reply_markup=get_main_menu_keyboard())
 
-# មុខងារសម្រាប់ Admin ចុចអនុញ្ញាតผ่านប៊ូតុង
 @bot.callback_query_handler(func=lambda call: call.data.startswith('approve_'))
 def approve_user_callback(call):
     if call.from_user.id != ADMIN_ID:
@@ -95,16 +89,14 @@ def approve_user_callback(call):
         text=f"{call.message.text}\n\n🟢 **ស្ថានភាព៖ បានអនុញ្ញាតរួចរាល់**"
     )
     
-    # ផ្ញើសារទៅบอก User នោះថាទទួលបានសិទ្ធិហើយ
     try:
         bot.send_message(
             target_chat_id, 
-            "🎉 អបអរសាទរ! សំណើរបស់អ្នកត្រូវបាន Admin អនុញ្ញាតហើយ។ ឥឡូវนี้អ្នកអាចប្រើប្រាស់ Bot បានធម្មតា។ សូមចុច /start ម្ដងទៀត។"
+            "🎉 អបអរសាទរ! សំណើរបស់អ្នកត្រូវបាន Admin អនុញ្ញាតហើយ។ ឥឡូវនេះអ្នកអាចប្រើប្រាស់ Bot បានធម្មតា។ សូមចុច /start ម្ដងទៀត។"
         )
     except:
         pass
 
-# មុខងារសម្រាប់ Admin មើលបញ្ជីអ្នកប្រើប្រាស់
 @bot.message_handler(commands=['users'])
 def show_users(message):
     if message.chat.id != ADMIN_ID:
@@ -122,7 +114,6 @@ def show_users(message):
         
     bot.reply_to(message, user_list_text, parse_mode="Markdown")
 
-# មុខងារគ្រប់គ្រងប្រព័ន្ធប៊ូតុងផ្សេងៗ (ត្រូវពិនិត្យសិទ្ធិមុនអនុញ្ញាត)
 @bot.callback_query_handler(func=lambda call: not call.data.startswith('approve_'))
 def callback_query(call):
     chat_id = call.message.chat.id
@@ -152,7 +143,7 @@ def callback_query(call):
         date_text = f" (កាលបរិច្ឆេទ៖ {selected_date})" if selected_date else " (អត់មានដាក់ថ្ងៃទី)"
         msg = bot.send_message(
             chat_id,
-            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់។\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏បាន)៖\n\n📌 ឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\n📌 ឧទាហរណ៍ ២៖ តុ - 20000៛"
+            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់。\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏បាន)៖\n\n📌 ឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\n📌 ឧទាហរណ៍ ២៖ តុ - 20000៛"
         )
         bot.register_next_step_handler(msg, generate_invoice)
         
@@ -194,7 +185,6 @@ def callback_query(call):
             user_attachments[chat_id] = []
         bot.send_message(chat_id, "🗑 បានលុបរូប Attachment ទាំងអស់រួចរាល់!", reply_markup=get_main_menu_keyboard())
 
-# មុខងារបញ្ជាផ្សេងៗ (ត្រូវពិនិត្យសិទ្ធិការពារផងដែរ)
 @bot.message_handler(commands=['setfilename'])
 def ask_pdf_filename(message):
     if message.chat.id not in approved_users: return
@@ -206,7 +196,7 @@ def save_pdf_filename(message):
     if message.text:
         clean_name = re.sub(r'[\\/*?:"<>|]', "", message.text.strip())
         user_pdf_names[chat_id] = clean_name
-        bot.reply_to(message, f"✅ បានកំណត់ឈ្មោះ File PDF ជា៖ **{clean_name}.pdf** ជោគជ័យ!", reply_markup=get_main_menu_keyboard())
+        bot.reply_to(message, f"✅ បានកំណត់ឈ្មោះ File PDF ជា៖ **{clean_name}.pdf** ជោគជ័យ!", parse_mode="Markdown", reply_markup=get_main_menu_keyboard())
     else:
         bot.reply_to(message, "❌ សូមបញ្ចូលអត្ថបទជាអក្សរ។")
 
@@ -220,7 +210,7 @@ def save_title(message):
     chat_id = message.chat.id
     if message.text:
         user_titles[chat_id] = message.text.strip()
-        bot.reply_to(message, f"✅ បានផ្លាស់ប្តូរចំណងជើងទៅជា៖ **{user_titles[chat_id]}**", reply_markup=get_main_menu_keyboard())
+        bot.reply_to(message, f"✅ បានផ្លាស់ប្តូរចំណងជើងទៅជា៖ **{user_titles[chat_id]}**", parse_mode="Markdown", reply_markup=get_main_menu_keyboard())
     else:
         bot.reply_to(message, "❌ សូមបញ្ចូលអត្ថបទជាអក្សរ។")
 
@@ -491,8 +481,9 @@ def generate_invoice(message):
         pdf_file = HTML(string=html_content).write_pdf()
         bot.send_document(
             message.chat.id, 
-            document=(file_name_final, pdf_file),
+            document=(file_name_final.encode('utf-8'), pdf_file),
             caption=f"វិក្កយបត្រ `{file_name_final}` របស់អ្នកបានបង្កើតរួចរាល់ហើយ! 🎉",
+            parse_mode="Markdown",
             reply_markup=get_main_menu_keyboard()
         )
     except Exception as e:
