@@ -9,6 +9,7 @@ API_TOKEN = os.environ.get('BOT_TOKEN', '8878587093:AAFncmD_3pLSir1paGSUgkzPhNhL
 bot = telebot.TeleBot(API_TOKEN)
 
 user_attachments = {}
+user_titles = {} # រក្សាទុកចំណងជើងវិក្កយបត្ររបស់ User ម្នាក់ៗ
 
 app = Flask(__name__)
 
@@ -20,9 +21,24 @@ def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
+# ១. មុខងារកែប្រែចំណងជើងវិក្កយបត្រ
+@bot.message_handler(commands=['settitle'])
+def ask_title(message):
+    msg = bot.reply_to(message, "✏️ សូមវាយបញ្ចូលចំណងជើងថ្មីដែលអ្នកចង់ឱ្យបង្ហាញលើវិក្កយបត្រ (ឧទាហរណ៍៖ បញ្ជីទិញឥវ៉ាន់ ឬ វិក្កយបត្រលក់ទំនិញ)：")
+    bot.register_next_step_handler(msg, save_title)
+
+def save_title(message):
+    chat_id = message.chat.id
+    if message.text:
+        user_titles[chat_id] = message.text.strip()
+        bot.reply_to(message, f"✅ បានផ្លាស់ប្តូរចំណងជើងទៅជា៖ **{user_titles[chat_id]}** ជោគជ័យ!")
+    else:
+        bot.reply_to(message, "❌ សូមបញ្ចូលអត្ថបទជាអក្សរ។")
+
+# ២. មុខងារកែប្រែ Logo
 @bot.message_handler(commands=['setlogo'])
 def ask_logo(message):
-    msg = bot.reply_to(message, "🖼 សូមផ្ញើរូបភាព Logo:")
+    msg = bot.reply_to(message, "🖼 សូមផ្ញើរូបភាព Logo ថ្មី៖")
     bot.register_next_step_handler(msg, save_logo)
 
 def save_logo(message):
@@ -32,22 +48,30 @@ def save_logo(message):
             downloaded_file = bot.download_file(file_info.file_path)
             with open("logo.jpg", 'wb') as new_file:
                 new_file.write(downloaded_file)
-            bot.reply_to(message, "✅ រក្សាទុក Logo ជោគជ័យ!")
+            bot.reply_to(message, "✅ រក្សាទុក Logo ថ្មីជោគជ័យ!")
         except Exception as e:
             bot.reply_to(message, f"❌ មានបញ្ហា: {e}")
     else:
         bot.reply_to(message, "❌ សូមផ្ញើជារូបភាពប៉ុណ្ណោះ។")
 
+# ៣. មុខងារបន្ថែម ឬកែប្រែរូបភាព Attachment (អាចលុបរបស់ចាស់ចោលសិនជាមួយ /clearattachment)
+@bot.message_handler(commands=['clearattachment'])
+def clear_attachment(message):
+    chat_id = message.chat.id
+    if chat_id in user_attachments:
+        user_attachments[chat_id] = []
+    bot.reply_to(message, "🗑 បានលុបរូបភាព Attachment ចាស់ៗទាំងអស់រួចរាល់! ឥឡូវអ្នកអាចប្រើ /addattachment ដើម្បីផ្ញើរូបថ្មីចូលបាន។")
+
 @bot.message_handler(commands=['addattachment'])
 def ask_attachment(message):
-    msg = bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមកជាបន្តបន្ទាប់ (អាចផ្ញើច្រើន)។ វាយពាក្យ /done ពេលរួចរាល់៖")
+    msg = bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អាចផ្ញើច្រើនសន្លឹកដាក់ ២ ជួរ)។ វាយពាក្យ /done ពេលរួចរាល់៖")
     bot.register_next_step_handler(msg, collect_attachments)
 
 def collect_attachments(message):
     chat_id = message.chat.id
     if message.text and message.text.lower() == '/done':
         count = len(user_attachments.get(chat_id, []))
-        bot.reply_to(message, f"✅ រក្សាទុក Attachment ចំនួន {count} សន្លឹកជោគជ័យ!")
+        bot.reply_to(message, f"✅ រក្សាទុក Attachment សរុបចំនួន {count} សន្លឹកជោគជ័យ!")
         return
 
     if message.photo:
@@ -73,10 +97,12 @@ def collect_attachments(message):
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     text = """
-សួស្តី! បញ្ជាដែលប្រើបាន៖
+សួស្តី! បញ្ជាដែលអ្នកអាចប្រើបាន៖
 /invoice - បង្កើតវិក្កយបត្រ A4 (ប្តូររៀលជាដុល្លារ 1$=4000៛)
-/setlogo - កំណត់ Logo
-/addattachment - បន្ថែមរូបភាព Attachment ដាក់ ២ ជួរ
+/settitle - កែប្រែចំណងជើងវិក្កយបត្រ
+/setlogo - កែប្រែ Logo
+/clearattachment - លុបរូប Attachment ចាស់ចោល
+/addattachment - បន្ថែមរូបភាព Attachment ថ្មី (ដាក់ ២ ជួរស្អាត)
     """
     bot.reply_to(message, text)
 
@@ -87,8 +113,9 @@ def ask_for_items(message):
     bot.register_next_step_handler(msg, generate_invoice)
 
 def generate_invoice(message):
-    bot.reply_to(message, "កំពុងរៀបចំវិក្កយបត្រ A4 សូមរង់ចាំបន្តិច... ⏳")
+    bot.reply_to(message, "កំពុងរៀបចំវិក្កយបត្រ A4 និងจัดតុបតែងរូបភាព... ⏳")
     
+    chat_id = message.chat.id
     user_input = message.text
     lines = user_input.split('\n')
     
@@ -130,18 +157,26 @@ def generate_invoice(message):
     logo_path = os.path.abspath("logo.jpg")
     logo_html = f'<img src="file://{logo_path}" class="logo" alt="Logo">' if os.path.exists("logo.jpg") else ''
     
-    # រៀបចំ Attachment ឱ្យដាក់ ២ ជួរ (Grid ឆ្វេង-ស្តាំ)
-    chat_id = message.chat.id
+    # យកចំណងជើងដែល User បានកំណត់ (បើគ្មាន ប្រើពាក្យ "បញ្ជីទិញឥវ៉ាន់" ជាលំនាំដើម)
+    current_title = user_titles.get(chat_id, "បញ្ជីទិញឥវ៉ាន់")
+
+    # រៀបចំ Attachment ឱ្យដាក់ ២ ជួរ ស្អាតបាត និងមានទំហំសមរម្យ
     attachments_html = ""
     if chat_id in user_attachments and user_attachments[chat_id]:
-        attachments_html += '<div class="attachment-section"><p class="attachment-title">ឯកសារភ្ជាប់ (Attachments):</p><div class="img-grid">'
+        attachments_html += '<div class="attachment-section"><p class="attachment-title">ឯកសារភ្ជាប់ (Attachments):</p><table class="img-table"><tr>'
+        idx = 0
         for img_file in user_attachments[chat_id]:
             img_path = os.path.abspath(img_file)
             if os.path.exists(img_path):
-                attachments_html += f'<div class="img-cell"><img src="file://{img_path}" class="attachment-img" alt="Attachment"></div>'
-        attachments_html += '</div></div>'
+                if idx > 0 and idx % 2 == 0:
+                    attachments_html += '</tr><tr>'
+                attachments_html += f'<td class="img-cell"><img src="file://{img_path}" class="attachment-img" alt="Attachment"></td>'
+                idx += 1
+        # បន្ថែមช่องទទេ បើចំនួនរូបសេស ដើម្បីរក្សារចនាសម្ព័ន្ធ ២ ជួរស្មើគ្នា
+        if idx % 2 != 0:
+            attachments_html += '<td class="img-cell"></td>'
+        attachments_html += '</tr></table></div>'
 
-    # ឈ្មោះ Font ត្រូវនឹង GitHub របស់អ្នក (Battambang-Regular.ttf)
     font_path = os.path.abspath("Battambang-Regular.ttf")
 
     html_content = f"""
@@ -173,18 +208,19 @@ def generate_invoice(message):
             .sig-box {{ display: table-cell; text-align: center; width: 50%; font-weight: bold; }}
             .sig-line {{ margin-top: 60px; }}
             
-            /* រៀបចំរចនាសម្ព័ន្ធរូបភាព Attachment ឱ្យដាក់ ២ ជួរ (Grid) */
-            .attachment-section {{ margin-top: 30px; page-break-inside: avoid; }}
-            .attachment-title {{ font-weight: bold; margin-bottom: 10px; text-decoration: underline; }}
-            .img-grid {{ width: 100%; display: table; }}
-            .img-cell {{ display: table-cell; width: 50%; text-align: center; padding: 5px; vertical-align: top; }}
-            .attachment-img {{ max-width: 100%; max-height: 200px; object-fit: contain; border: 1px dashed #ccc; padding: 4px; }}
+            /* រចនាសម្ព័ន្ធរូបភាព Attachment ដាក់ ២ ជួរស្អាត និងមានស៊ុមសមរម្យ */
+            .attachment-section {{ margin-top: 25px; page-break-inside: avoid; }}
+            .attachment-title {{ font-weight: bold; margin-bottom: 8px; text-decoration: underline; font-size: 12px; }}
+            .img-table {{ width: 100%; border-collapse: collapse; border: none; }}
+            .img-table td {{ border: none; padding: 5px; vertical-align: middle; text-align: center; }}
+            .img-cell {{ width: 50%; }}
+            .attachment-img {{ max-width: 90%; max-height: 180px; object-fit: contain; border: 1px solid #ccc; padding: 3px; background-color: #fafafa; }}
         </style>
     </head>
     <body>
         <div class="header-container">
             {logo_html}
-            <h2>បញ្ជីទិញឥវ៉ាន់</h2>
+            <h2>{current_title}</h2>
         </div>
         
         <table>
@@ -230,10 +266,10 @@ def generate_invoice(message):
         bot.send_document(
             message.chat.id, 
             document=('Invoice_A4.pdf', pdf_file),
-            caption="វិក្កយបត្រ A4 របស់អ្នកត្រូវបានបង្កើតដោយជោគជ័យ (អក្សរខ្មែរច្បាស់ និងរូបភាព ២ ជួរ)! 🎉"
+            caption="វិក្កយបត្រ A4 របស់អ្នករួចរាល់ហើយ! (កែចំណងជើង និងจัดរូប ២ ជួរស្អាត) 🎉"
         )
     except Exception as e:
-        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងการបង្កើត PDF: {e}")
+        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}")
 
 if __name__ == "__main__":
     threading.Thread(target=run_web_server).start()
