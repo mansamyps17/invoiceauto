@@ -414,8 +414,8 @@ def generate_invoice(message):
                 font-family: 'LocalBattambang';
                 src: url('file://{font_path}');
             }}
-            /* កំណត់ Margins ថ្មីតាមសំណើ៖ Top 0.8cm, Bottom 0.4cm, Left 0.3cm, Right 0.3cm */
-            @page {{ size: A4; margin-top: 0.8cm; margin-bottom: 0.4cm; margin-left: 0.3cm; margin-right: 0.3cm; }}
+            /* កំណត់ Margins ថ្មីតាមសំណើ៖ Top 1.0cm, Bottom 0.5cm, Left 0.5cm, Right 0.5cm */
+            @page {{ size: A4; margin-top: 1.0cm; margin-bottom: 0.5cm; margin-left: 0.5cm; margin-right: 0.5cm; }}
             
             body {{ font-family: 'LocalBattambang', sans-serif; font-size: 13px; color: #000; }}
             
@@ -440,7 +440,6 @@ def generate_invoice(message):
             .img-table {{ width: 100%; border-collapse: collapse; border: none; }}
             .img-table td {{ border: none; padding: 6px; vertical-align: middle; text-align: center; }}
             .img-cell {{ width: 50%; }}
-            /* ពង្រីកទំហំរូបភាព Attachments ឱ្យធំជាងមុនបន្តិច (max-width: 98%, max-height: 350px) */
             .attachment-img {{ max-width: 98%; max-height: 350px; object-fit: contain; border: 1px solid #ccc; padding: 4px; background-color: #fafafa; }}
         </style>
     </head>
@@ -509,7 +508,7 @@ def generate_invoice(message):
             os.remove(pdf_filename_disk)
             
     except Exception as e:
-        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}", reply_markup=get_main_menu_keyboard())
+        bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងการបង្កើត PDF: {e}", reply_markup=get_main_menu_keyboard())
 
 if __name__ == "__main__":
     threading.Thread(target=run_web_server).start()
