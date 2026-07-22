@@ -59,15 +59,26 @@ def send_welcome(message):
     if chat_id not in approved_users:
         bot.reply_to(message, "⏳ គណនីរបស់អ្នកមិនទាន់មានសិទ្ធិប្រើប្រាស់ Bot នេះទេ។ សំណើរបស់អ្នកត្រូវបានផ្ញើជូន Admin រួចរាល់ សូមរង់ចាំការអនុញ្ញាត។")
         
-        admin_markup = InlineKeyboardMarkup()
-        admin_markup.add(InlineKeyboardButton("✅ អនុញ្ញាតឱ្យប្រើ", callback_data=f"approve_{chat_id}"))
-        
-        bot.send_message(
-            ADMIN_ID, 
-            f"🔔 **មានអ្នកស្នើសុំប្រើប្រាស់ Bot ថ្មី!**\n\n👤 ឈ្មោះ: {registered_users[chat_id]['name']}\nអាយឌី (ID): `{chat_id}`\nUsername: {registered_users[chat_id]['username']}",
-            reply_markup=admin_markup,
-            parse_mode="Markdown"
-        )
+        # ផ្ញើសារជូនដំណឹងទៅ Admin យ៉ាងមានសុវត្ថិភាព (គ្មាន Markdown ដើម្បីការពារ Error)
+        try:
+            admin_markup = InlineKeyboardMarkup()
+            admin_markup.add(InlineKeyboardButton("✅ អនុញ្ញាតឱ្យប្រើ", callback_data=f"approve_{chat_id}"))
+            
+            notification_text = (
+                "🔔 មានអ្នកស្នើសុំប្រើប្រាស់ Bot ថ្មី!\n\n"
+                f"👤 ឈ្មោះ: {registered_users[chat_id]['name']}\n"
+                f"អាយឌី (ID): {chat_id}\n"
+                f"Username: {registered_users[chat_id]['username']}"
+            )
+            
+            bot.send_message(
+                ADMIN_ID, 
+                notification_text,
+                reply_markup=admin_markup
+            )
+        except Exception as e:
+            print(f"Error sending approval to admin: {e}")
+            
         return
 
     text = "សួស្តី! សូមជ្រើសរើសជម្រើសខាងក្រោមដើម្បីចាប់ផ្តើម៖ 👇"
@@ -482,7 +493,6 @@ def generate_invoice(message):
         pdf_filename_disk = f"invoice_{chat_id}.pdf"
         HTML(string=html_content).write_pdf(pdf_filename_disk)
         
-        # បំប្លែងឈ្មោះជា utf-8 bytes ឱ្យត្រូវស្តង់ដារ Telegram API multipart file upload
         encoded_file_name = file_name_final.encode('utf-8')
         
         with open(pdf_filename_disk, 'rb') as f:
