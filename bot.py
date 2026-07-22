@@ -59,7 +59,6 @@ def send_welcome(message):
     if chat_id not in approved_users:
         bot.reply_to(message, "⏳ គណនីរបស់អ្នកមិនទាន់មានសិទ្ធិប្រើប្រាស់ Bot នេះទេ។ សំណើរបស់អ្នកត្រូវបានផ្ញើជូន Admin រួចរាល់ សូមរង់ចាំការអនុញ្ញាត។")
         
-        # ផ្ញើសារជូនដំណឹងទៅ Admin យ៉ាងមានសុវត្ថិភាព (គ្មាន Markdown ដើម្បីការពារ Error)
         try:
             admin_markup = InlineKeyboardMarkup()
             admin_markup.add(InlineKeyboardButton("✅ អនុញ្ញាតឱ្យប្រើ", callback_data=f"approve_{chat_id}"))
@@ -415,7 +414,8 @@ def generate_invoice(message):
                 font-family: 'LocalBattambang';
                 src: url('file://{font_path}');
             }}
-            @page {{ size: A4; margin: 15mm; }}
+            /* កំណត់ទំហំ Margins ថ្មីຕາມតម្រូវការ៖ Top 0.4cm, Bottom 0.25cm, Left 0.15cm, Right 0.15cm */
+            @page {{ size: A4; margin-top: 0.4cm; margin-bottom: 0.25cm; margin-left: 0.15cm; margin-right: 0.15cm; }}
             
             body {{ font-family: 'LocalBattambang', sans-serif; font-size: 13px; color: #000; }}
             
