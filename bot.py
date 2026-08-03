@@ -5,7 +5,6 @@ from flask import Flask
 import threading
 import os
 import re
-import sqlite3
 from datetime import datetime
 
 API_TOKEN = os.environ.get('BOT_TOKEN', '8878587093:AAFncmD_3pLSir1paGSUgkzPhNhL4oO40Hg')
@@ -17,46 +16,12 @@ user_logos = {}
 user_attachments = {}
 user_titles = {}
 user_pdf_names = {}
+registered_users = {}  # 🗂 រក្សាទុក User ទាំងអស់នៅទីនេះ
 
 approved_users = set()
 approved_users.add(ADMIN_ID)
 
 app = Flask(__name__)
-
-# ----------------- SQLite Database Setup -----------------
-def init_db():
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY,
-            name TEXT,
-            username TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-init_db()
-
-def save_user_to_db(user_id, name, username):
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT OR REPLACE INTO users (user_id, name, username) 
-        VALUES (?, ?, ?)
-    ''', (user_id, name, username))
-    conn.commit()
-    conn.close()
-
-def get_all_users_from_db():
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT user_id, name, username FROM users')
-    rows = cursor.fetchall()
-    conn.close()
-    return rows
-# ---------------------------------------------------------
 
 @app.route('/')
 def home():
@@ -85,11 +50,12 @@ def send_welcome(message):
     chat_id = message.chat.id
     user = message.from_user
     
-    name = f"{user.first_name or ''} {user.last_name or ''}".strip()
-    username = f"@{user.username}" if user.username else "អត់មាន Username"
-
-    # រក្សាទុក User ចូល Database ស្វ័យប្រវត្តិ
-    save_user_to_db(chat_id, name, username)
+    # កត់ត្រា User ទុកគ្រប់ពេលដែលពួកគេចុច /start
+    registered_users[chat_id] = {
+        "id": chat_id,
+        "name": f"{user.first_name or ''} {user.last_name or ''}".strip(),
+        "username": f"@{user.username}" if user.username else "អត់មាន Username"
+    }
 
     if chat_id not in approved_users:
         bot.reply_to(message, "⏳ គណនីរបស់អ្នកមិនទាន់មានសិទ្ធិប្រើប្រាស់ Bot នេះទេ។ សំណើរបស់អ្នកត្រូវបានផ្ញើជូន Admin រួចរាល់ សូមរង់ចាំការអនុញ្ញាត។")
@@ -100,9 +66,9 @@ def send_welcome(message):
             
             notification_text = (
                 "🔔 មានអ្នកស្នើសុំប្រើប្រាស់ Bot ថ្មី!\n\n"
-                f"👤 ឈ្មោះ: {name}\n"
+                f"👤 ឈ្មោះ: {registered_users[chat_id]['name']}\n"
                 f"អាយឌី (ID): {chat_id}\n"
-                f"Username: {username}"
+                f"Username: {registered_users[chat_id]['username']}"
             )
             
             bot.send_message(
@@ -137,7 +103,7 @@ def approve_user_callback(call):
     try:
         bot.send_message(
             target_chat_id, 
-            "🎉 អបអរសាទរ! សំណើរបស់អ្នកត្រូវបាន Admin អនុញ្ញាតហើយ។ ឥឡូវនេះអ្នកអាចប្រើប្រាស់ Bot ได้ធម្មតា។ សូមចុច /start ម្ដងទៀត។"
+            "🎉 អបអរសាទរ! សំណើរបស់អ្នកត្រូវបាន Admin អនុញ្ញាតហើយ។ ឥឡូវនេះអ្នកអាចប្រើប្រាស់ Bot បានធម្មតា។ សូមចុច /start ម្ដងទៀត។"
         )
     except:
         pass
@@ -145,19 +111,18 @@ def approve_user_callback(call):
 @bot.message_handler(commands=['users'])
 def show_users(message):
     if message.chat.id != ADMIN_ID:
+        bot.reply_to(message, "❌ អ្នកមិនមានសិទ្ធិប្រើប្រាស់ពាក្យបញ្ជាទេនេះទេ។")
         return
         
-    rows = get_all_users_from_db()
-    total_users = len(rows)
-    
+    total_users = len(registered_users)
     if total_users == 0:
         bot.reply_to(message, "⚠️ មិនទាន់មានអ្នកប្រើប្រាស់ណាមួយបាន Start Bot ទេ។")
         return
         
     user_list_text = f"👥 **ចំនួនអ្នកប្រើប្រាស់សរុប៖** {total_users} នាក់\n\n**បញ្ជីឈ្មោះ៖**\n"
-    for idx, (uid, name, username) in enumerate(rows, 1):
+    for idx, (uid, info) in enumerate(registered_users.items(), 1):
         status = "🟢 ឱ្យប្រើ" if uid in approved_users else "⏳ រង់ចាំ"
-        user_list_text += f"{idx}. {name} ({username}) - ID: `{uid}` [{status}]\n"
+        user_list_text += f"{idx}. {info['name']} ({info['username']}) - ID: `{uid}` [{status}]\n"
         
     bot.reply_to(message, user_list_text, parse_mode="Markdown")
 
@@ -190,7 +155,7 @@ def callback_query(call):
         date_text = f" (កាលបរិច្ឆេទ៖ {selected_date})" if selected_date else " (អត់មានដាក់ថ្ងៃទី)"
         msg = bot.send_message(
             chat_id,
-            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់。\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏ได้)៖\n\n📌 ឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\n📌 ឧទាហរណ៍ ២៖ តុ - 20000៛"
+            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់。\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏បាន)៖\n\n📌 ឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\n📌 ឧទាហរណ៍ ២៖ តុ - 20000៛"
         )
         bot.register_next_step_handler(msg, generate_invoice)
         
@@ -223,7 +188,7 @@ def callback_query(call):
         bot.answer_callback_query(call.id)
         bot.send_message(
             chat_id, 
-            "📎 **របៀបបន្ថែម Attachment:**\nសូមផ្ញើរូបភាពចូលមកในឆាតនេះ (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាបានตามចិត្ត)។ ពេលផ្ញើរួចរាល់ សូមវាយពាក្យ `/done` ដើម្បីបញ្ជាក់។"
+            "📎 **របៀបបន្ថែម Attachment:**\nសូមផ្ញើរូបភាពចូលមកក្នុងឆាតនេះ (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាได้ตามចិត្ត)។ ពេលផ្ញើរួចរាល់ សូមវាយពាក្យ `/done` ដើម្បីបញ្ជាក់។"
         )
         
     elif call.data == 'btn_clearattachment':
@@ -235,7 +200,7 @@ def callback_query(call):
 @bot.message_handler(commands=['setfilename'])
 def ask_pdf_filename(message):
     if message.chat.id not in approved_users: return
-    msg = bot.reply_to(message, "📁 សូមវាយបញ្ចូលឈ្មោះ File PDF ที่អ្នកចង់ได้៖")
+    msg = bot.reply_to(message, "📁 សូមវាយបញ្ចូលឈ្មោះ File PDF ដែលអ្នកចង់បាន៖")
     bot.register_next_step_handler(msg, save_pdf_filename)
 
 def save_pdf_filename(message):
@@ -289,7 +254,7 @@ def save_logo(message):
 @bot.message_handler(commands=['addattachment'])
 def ask_attachment(message):
     if message.chat.id not in approved_users: return
-    bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាបាន)។ ផ្ញើរួចសូមវាយពាក្យ `/done`!")
+    bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាได้)។ ផ្ញើរួចសូមវាយពាក្យ `/done`!")
 
 @bot.message_handler(content_types=['photo'])
 def handle_photos(message):
