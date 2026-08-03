@@ -16,7 +16,7 @@ user_logos = {}
 user_attachments = {}
 user_titles = {}
 user_pdf_names = {}
-registered_users = {}  # 🗂 រក្សាទុក User ទាំងអស់នៅទីនេះ
+registered_users = {}
 
 approved_users = set()
 approved_users.add(ADMIN_ID)
@@ -50,7 +50,6 @@ def send_welcome(message):
     chat_id = message.chat.id
     user = message.from_user
     
-    # កត់ត្រា User ទុកគ្រប់ពេលដែលពួកគេចុច /start
     registered_users[chat_id] = {
         "id": chat_id,
         "name": f"{user.first_name or ''} {user.last_name or ''}".strip(),
@@ -111,7 +110,6 @@ def approve_user_callback(call):
 @bot.message_handler(commands=['users'])
 def show_users(message):
     if message.chat.id != ADMIN_ID:
-        bot.reply_to(message, "❌ អ្នកមិនមានសិទ្ធិប្រើប្រាស់ពាក្យបញ្ជាទេនេះទេ។")
         return
         
     total_users = len(registered_users)
@@ -119,12 +117,12 @@ def show_users(message):
         bot.reply_to(message, "⚠️ មិនទាន់មានអ្នកប្រើប្រាស់ណាមួយបាន Start Bot ទេ។")
         return
         
-    user_list_text = f"👥 **ចំនួនអ្នកប្រើប្រាស់សរុប៖** {total_users} នាក់\n\n**បញ្ជីឈ្មោះ៖**\n"
+    user_list_text = f"👥 ចំនួនអ្នកប្រើប្រាស់សរុប៖ {total_users} នាក់\n\nបញ្ជីឈ្មោះ៖\n"
     for idx, (uid, info) in enumerate(registered_users.items(), 1):
-        status = "🟢 ឱ្យប្រើ" if uid in approved_users else "⏳ រង់ចាំ"
-        user_list_text += f"{idx}. {info['name']} ({info['username']}) - ID: `{uid}` [{status}]\n"
+        status = "ឱ្យប្រើ" if uid in approved_users else "រង់ចាំ"
+        user_list_text += f"{idx}. {info['name']} ({info['username']}) - ID: {uid} [{status}]\n"
         
-    bot.reply_to(message, user_list_text, parse_mode="Markdown")
+    bot.reply_to(message, user_list_text)
 
 @bot.callback_query_handler(func=lambda call: not call.data.startswith('approve_'))
 def callback_query(call):
@@ -155,7 +153,7 @@ def callback_query(call):
         date_text = f" (កាលបរិច្ឆេទ៖ {selected_date})" if selected_date else " (អត់មានដាក់ថ្ងៃទី)"
         msg = bot.send_message(
             chat_id,
-            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់。\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏បាន)៖\n\n📌 ឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\n📌 ឧទាហរណ៍ ២៖ តុ - 20000៛"
+            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់。\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏ได้)៖\n\n📌 ឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\n📌 ឧទាហរណ៍ ២៖ តុ - 20000៛"
         )
         bot.register_next_step_handler(msg, generate_invoice)
         
