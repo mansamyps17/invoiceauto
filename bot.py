@@ -153,7 +153,7 @@ def callback_query(call):
         date_text = f" (កាលបរិច្ឆេទ៖ {selected_date})" if selected_date else " (អត់មានដាក់ថ្ងៃទី)"
         msg = bot.send_message(
             chat_id,
-            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់。\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏ได้)៖\n\n📌 ឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\n📌 ឧទាហរណ៍ ២៖ តុ - 20000៛"
+            f"✅ បានកំណត់កាលបរិច្ឆេទ{date_text}រួចរាល់។\n\nសូមផ្ញើបញ្ជីទំនិញរបស់អ្នកមក (អាចដាក់ ឈ្មោះ - បរិមាណ - ឯកតា - តម្លៃ ឬ ឈ្មោះ - តម្លៃ ក៏បាន)៖\n\n📌 ឧទាហរណ៍ ១៖ កៅអី - 2 - ដុំ - 15$\n📌 ឧទាហរណ៍ ២៖ តុ - 20000៛"
         )
         bot.register_next_step_handler(msg, generate_invoice)
         
@@ -186,7 +186,7 @@ def callback_query(call):
         bot.answer_callback_query(call.id)
         bot.send_message(
             chat_id, 
-            "📎 **របៀបបន្ថែម Attachment:**\nសូមផ្ញើរូបភាពចូលមកក្នុងឆាតនេះ (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាได้ตามចិត្ត)។ ពេលផ្ញើរួចរាល់ សូមវាយពាក្យ `/done` ដើម្បីបញ្ជាក់។"
+            "📎 **របៀបបន្ថែម Attachment:**\nសូមផ្ញើរូបភាពចូលមកក្នុងឆាតនេះ (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាបានតាមចិត្ត)។ ពេលផ្ញើរួចរាល់ សូមវាយពាក្យ `/done` ដើម្បីបញ្ជាក់។"
         )
         
     elif call.data == 'btn_clearattachment':
@@ -252,7 +252,7 @@ def save_logo(message):
 @bot.message_handler(commands=['addattachment'])
 def ask_attachment(message):
     if message.chat.id not in approved_users: return
-    bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាได้)។ ផ្ញើរួចសូមវាយពាក្យ `/done`!")
+    bot.reply_to(message, "📎 សូមផ្ញើរូបភាព Attachment ចូលមក (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាបាន)។ ផ្ញើរួចសូមវាយពាក្យ `/done`!")
 
 @bot.message_handler(content_types=['photo'])
 def handle_photos(message):
