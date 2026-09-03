@@ -40,8 +40,7 @@ def get_main_menu_keyboard():
         InlineKeyboardButton("✏️ ដូរចំណងជើងវិក្កយបត្រ", callback_data='btn_settitle'),
         InlineKeyboardButton("🖼 កំណត់ Logo", callback_data='btn_setlogo'),
         InlineKeyboardButton("🗑 លុប Logo", callback_data='btn_clearlogo'),
-        InlineKeyboardButton("📎 បន្ថែម Attachment", callback_data='btn_addattachment'),
-        InlineKeyboardButton("🗑 លុប Attachment", callback_data='btn_clearattachment')
+        InlineKeyboardButton("📎 បន្ថែម Attachment", callback_data='btn_addattachment')
     )
     return markup
 
@@ -188,12 +187,6 @@ def callback_query(call):
             chat_id, 
             "📎 **របៀបបន្ថែម Attachment:**\nសូមផ្ញើរូបភាពចូលមកក្នុងឆាតនេះ (អាចផ្ញើច្រើនសន្លឹកព្រមគ្នាបានតាមចិត្ត)។ ពេលផ្ញើរួចរាល់ សូមវាយពាក្យ `/done` ដើម្បីបញ្ជាក់។"
         )
-        
-    elif call.data == 'btn_clearattachment':
-        bot.answer_callback_query(call.id)
-        if chat_id in user_attachments:
-            user_attachments[chat_id] = []
-        bot.send_message(chat_id, "🗑 បានលុបរូប Attachment ទាំងអស់រួចរាល់!", reply_markup=get_main_menu_keyboard())
 
 @bot.message_handler(commands=['setfilename'])
 def ask_pdf_filename(message):
@@ -505,6 +498,16 @@ def generate_invoice(message):
             
         if os.path.exists(pdf_filename_disk):
             os.remove(pdf_filename_disk)
+            
+        # សម្អាតរូបភាព Attachment ទាំងអស់ចេញពី Server និង Reset បញ្ជីចោលក្រោយពេលបង្កើត PDF រួច
+        if chat_id in user_attachments:
+            for img_file in user_attachments[chat_id]:
+                if os.path.exists(img_file):
+                    try:
+                        os.remove(img_file)
+                    except:
+                        pass
+            user_attachments[chat_id] = []
             
     except Exception as e:
         bot.reply_to(message, f"សុំទោស! មានបញ្ហាក្នុងការបង្កើត PDF: {e}", reply_markup=get_main_menu_keyboard())
